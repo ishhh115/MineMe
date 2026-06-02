@@ -1,3 +1,5 @@
+import type { Rule } from "sanity";
+
 export const group = {
   name: "group",
   title: "Group",
@@ -8,19 +10,19 @@ export const group = {
       title: "Organisation",
       type: "reference",
       to: [{ type: "organisation" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "chatId",
       title: "Chat ID",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "name",
       title: "Group Name",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "participants",
@@ -54,7 +56,13 @@ export const group = {
       title: "Health Status",
       type: "string",
       options: {
-        list: ["active", "high_activity", "deadline_risk", "reminder_heavy", "quiet"],
+        list: [
+          "active",
+          "high_activity",
+          "deadline_risk",
+          "reminder_heavy",
+          "quiet",
+        ],
       },
       initialValue: "active",
     },
@@ -81,7 +89,7 @@ export const group = {
       title: "Completion Percentage",
       type: "number",
       initialValue: 0,
-      validation: (Rule) => Rule.min(0).max(100),
+      validation: (rule: Rule) => rule.min(0).max(100),
     },
     {
       name: "latestExtractedMessage",
@@ -103,7 +111,7 @@ export const group = {
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
   ],
-}
+};

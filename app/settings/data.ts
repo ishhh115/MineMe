@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { getGroups } from "@/lib/queries"
 import { sanityClient } from "@/lib/sanity"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 
 type SettingsOrganisation = {
   _id: string

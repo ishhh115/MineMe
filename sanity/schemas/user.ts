@@ -1,3 +1,5 @@
+import type { Rule } from "sanity";
+
 export const user = {
   name: "user",
   title: "User",
@@ -7,26 +9,26 @@ export const user = {
       name: "name",
       title: "Full Name",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "email",
       title: "Email",
       type: "string",
-      validation: (Rule) => Rule.required().email(),
+      validation: (rule: Rule) => rule.required().email(),
     },
     {
       name: "phone",
       title: "WhatsApp Phone Number",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "organisation",
       title: "Organisation",
       type: "reference",
       to: [{ type: "organisation" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "role",
@@ -36,7 +38,7 @@ export const user = {
         list: ["admin", "manager", "member", "guest"],
       },
       initialValue: "member",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "isVerified",
@@ -78,7 +80,7 @@ export const user = {
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
   ],
-}
+};

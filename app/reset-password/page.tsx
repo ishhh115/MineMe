@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams()
+
   const [email, setEmail] = useState(searchParams.get("email") || "")
   const [code, setCode] = useState("")
   const [password, setPassword] = useState("")
@@ -82,6 +83,7 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </Field>
+
                 <Field>
                   <FieldLabel htmlFor="code">Reset code</FieldLabel>
                   <Input
@@ -98,6 +100,7 @@ export default function ResetPasswordPage() {
                     Use the 6-digit code from your reset email.
                   </FieldDescription>
                 </Field>
+
                 <Field>
                   <FieldLabel htmlFor="password">New password</FieldLabel>
                   <Input
@@ -108,8 +111,11 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </Field>
+
                 <Field>
-                  <FieldLabel htmlFor="confirm-password">Confirm new password</FieldLabel>
+                  <FieldLabel htmlFor="confirm-password">
+                    Confirm new password
+                  </FieldLabel>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -118,8 +124,17 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </Field>
-                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-                {message && <p className="text-sm text-emerald-400 text-center">{message}</p>}
+
+                {error && (
+                  <p className="text-sm text-red-400 text-center">{error}</p>
+                )}
+
+                {message && (
+                  <p className="text-sm text-emerald-400 text-center">
+                    {message}
+                  </p>
+                )}
+
                 <Field>
                   <Button type="submit" disabled={loading}>
                     {loading ? "Resetting password..." : "Reset password"}
@@ -131,5 +146,13 @@ export default function ResetPasswordPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

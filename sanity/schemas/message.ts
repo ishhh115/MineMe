@@ -1,3 +1,5 @@
+import type { Rule } from "sanity";
+
 export const message = {
   name: "message",
   title: "Raw Message",
@@ -8,44 +10,44 @@ export const message = {
       title: "Organisation",
       type: "reference",
       to: [{ type: "organisation" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "group",
       title: "Group",
       type: "reference",
       to: [{ type: "group" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "messageId",
       title: "Message ID",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "chatId",
       title: "Chat ID",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "sender",
       title: "Sender Phone",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "text",
       title: "Message Text",
       type: "text",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "timestamp",
       title: "Timestamp",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "isTask",
@@ -63,7 +65,7 @@ export const message = {
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
   ],
-}
+};

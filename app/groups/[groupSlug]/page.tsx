@@ -15,6 +15,8 @@ import {
 } from "lucide-react"
 
 export function generateStaticParams() {
+
+
   return groupSummaries.map((group) => ({ groupSlug: group.slug }))
 }
 
@@ -34,8 +36,16 @@ function MiniBars({ values, color = "rgba(74,222,128,0.8)" }: { values: number[]
   )
 }
 
-export default function GroupDetailPage({ params }: { params: { groupSlug: string } }) {
-  const group = getGroupBySlug(params.groupSlug)
+type PageProps = {
+  params: Promise<{
+    groupSlug: string
+  }>
+}
+
+export default async function GroupDetailPage({ params }: PageProps) {
+  const { groupSlug } = await params
+
+  const group = getGroupBySlug(groupSlug)
 
   if (!group) {
     notFound()

@@ -1,3 +1,5 @@
+import type { Rule } from "sanity";
+
 export const notification = {
   name: "notification",
   title: "Notification",
@@ -8,35 +10,37 @@ export const notification = {
       title: "Organisation",
       type: "reference",
       to: [{ type: "organisation" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "task",
       title: "Task",
       type: "reference",
       to: [{ type: "task" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "channel",
       title: "Channel",
       type: "string",
       options: { list: ["whatsapp", "email"] },
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "status",
       title: "Status",
       type: "string",
-      options: { list: ["pending", "sent", "delivered", "failed", "retrying", "cancelled"] },
+      options: {
+        list: ["pending", "sent", "delivered", "failed", "retrying", "cancelled"],
+      },
       initialValue: "pending",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "recipient",
       title: "Recipient",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "message",
@@ -65,7 +69,7 @@ export const notification = {
       name: "scheduledAt",
       title: "Scheduled At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "sentAt",
@@ -87,7 +91,7 @@ export const notification = {
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
   ],
-}
+};

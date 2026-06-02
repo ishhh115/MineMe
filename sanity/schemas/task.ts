@@ -1,3 +1,5 @@
+import type { Rule } from "sanity";
+
 export const task = {
   name: "task",
   title: "Task",
@@ -8,20 +10,20 @@ export const task = {
       title: "Organisation",
       type: "reference",
       to: [{ type: "organisation" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "group",
       title: "Group",
       type: "reference",
       to: [{ type: "group" }],
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "taskText",
       title: "Task Text",
       type: "string",
-      validation: (Rule) => Rule.required().min(3),
+      validation: (rule: Rule) => rule.required().min(3),
     },
     {
       name: "assignedTo",
@@ -44,7 +46,7 @@ export const task = {
       type: "string",
       options: { list: ["high", "medium", "low"] },
       initialValue: "low",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "status",
@@ -52,7 +54,7 @@ export const task = {
       type: "string",
       options: { list: ["pending", "completed", "snoozed", "cancelled"] },
       initialValue: "pending",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "source",
@@ -60,7 +62,7 @@ export const task = {
       type: "string",
       options: { list: ["ai", "manual"] },
       initialValue: "ai",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "whatsappStatus",
@@ -81,13 +83,13 @@ export const task = {
       name: "originalMessage",
       title: "Original WhatsApp Message",
       type: "text",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "messageId",
       title: "Message ID",
       type: "string",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
     {
       name: "webhookId",
@@ -103,7 +105,7 @@ export const task = {
       name: "confidence",
       title: "Extraction Confidence",
       type: "number",
-      validation: (Rule) => Rule.min(0).max(1),
+      validation: (rule: Rule) => rule.min(0).max(1),
     },
     {
       name: "timeline",
@@ -155,7 +157,7 @@ export const task = {
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
+      validation: (rule: Rule) => rule.required(),
     },
   ],
-}
+};

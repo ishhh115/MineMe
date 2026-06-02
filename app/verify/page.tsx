@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-export default function VerifyPage() {
+function VerifyForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
   const [email, setEmail] = useState(() => {
     const queryEmail = searchParams.get("email") || ""
     if (queryEmail) return queryEmail
@@ -27,6 +28,7 @@ export default function VerifyPage() {
       return ""
     }
   })
+
   const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -67,12 +69,13 @@ export default function VerifyPage() {
 
       if (pending) {
         try {
-          const parsed = JSON.parse(pending) as { password?: string; phone?: string }
+          const parsed = JSON.parse(pending) as {
+            password?: string
+            phone?: string
+          }
           password = parsed.password || ""
           phone = parsed.phone || ""
-        } catch {
-          // ignore malformed pending state
-        }
+        } catch {}
       }
 
       if (!password) {
@@ -129,6 +132,7 @@ export default function VerifyPage() {
                     required
                   />
                 </Field>
+
                 <Field>
                   <FieldLabel htmlFor="code">6-digit OTP</FieldLabel>
                   <Input
@@ -145,8 +149,17 @@ export default function VerifyPage() {
                     The code expires 15 minutes after signup.
                   </FieldDescription>
                 </Field>
-                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-                {success && <p className="text-sm text-emerald-400 text-center">{success}</p>}
+
+                {error && (
+                  <p className="text-sm text-red-400 text-center">{error}</p>
+                )}
+
+                {success && (
+                  <p className="text-sm text-emerald-400 text-center">
+                    {success}
+                  </p>
+                )}
+
                 <Field>
                   <Button type="submit" disabled={loading}>
                     {loading ? "Verifying..." : "Verify and continue"}
@@ -158,5 +171,13 @@ export default function VerifyPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyForm />
+    </Suspense>
   )
 }

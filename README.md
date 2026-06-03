@@ -18,16 +18,16 @@ MindMe is a B2B SaaS platform that automatically extracts actionable tasks from 
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 15, shadcn/ui, Tailwind CSS |
-| Database | Sanity |
+| Layer          | Technology                               |
+| -------------- | ---------------------------------------- |
+| Frontend       | Next.js 15, shadcn/ui, Tailwind CSS      |
+| Database       | Sanity                                   |
 | Authentication | NextAuth.js (credentials + Google OAuth) |
-| AI | OpenAI GPT-4o-mini |
-| WhatsApp | Whapi.Cloud |
-| Email | AWS SES |
-| Scheduling | Vercel Cron Jobs |
-| Deployment | Vercel |
+| AI             | OpenAI GPT-4o-mini                       |
+| WhatsApp       | Whapi.Cloud                              |
+| Email          | AWS SES                                  |
+| Scheduling     | Vercel Cron Jobs                         |
+| Deployment     | Vercel                                   |
 
 ---
 
@@ -39,43 +39,43 @@ WhatsApp Group message arrives in group. Whapi detects it and sends webhook to /
 
 ## Pages
 
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page |
-| `/login` | Login with phone, email or Google |
-| `/signup` | Register new account |
-| `/verify` | Email OTP verification |
-| `/forgot-password` | Request password reset |
-| `/reset-password` | Reset password with OTP |
-| `/onboarding` | Setup wizard for new users |
-| `/dashboard` | Operational overview |
-| `/tasks` | All extracted tasks with filters |
-| `/groups` | Monitored WhatsApp groups |
-| `/notifications` | Reminder delivery history |
-| `/settings` | Whapi connection and preferences |
+| Route              | Description                       |
+| ------------------ | --------------------------------- |
+| `/`                | Landing page                      |
+| `/login`           | Login with phone, email or Google |
+| `/signup`          | Register new account              |
+| `/verify`          | Email OTP verification            |
+| `/forgot-password` | Request password reset            |
+| `/reset-password`  | Reset password with OTP           |
+| `/onboarding`      | Setup wizard for new users        |
+| `/dashboard`       | Operational overview              |
+| `/tasks`           | All extracted tasks with filters  |
+| `/groups`          | Monitored WhatsApp groups         |
+| `/notifications`   | Reminder delivery history         |
+| `/settings`        | Whapi connection and preferences  |
 
 ---
 
 ## API Routes
 
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/api/webhook` | POST | Receives Whapi messages |
-| `/api/process` | POST | GPT-4o-mini task extraction |
-| `/api/auth/register` | POST | User registration |
-| `/api/auth/verify-otp` | POST | Email OTP verification |
-| `/api/auth/forgot-password` | POST | Request password reset |
-| `/api/auth/reset-password` | POST | Reset password with OTP |
-| `/api/auth/check-user` | POST | Check if user exists and is verified |
-| `/api/cron/reminders` | GET | Deadline reminder scheduler |
-| `/api/send-email` | POST | AWS SES email sender |
-| `/api/setup` | POST | Organisation setup |
-| `/api/tasks/update-status` | POST | Update task status |
-| `/api/tasks/snooze` | POST | Snooze a task |
-| `/api/tasks/reassign` | POST | Reassign a task |
-| `/api/tasks/resend` | POST | Resend reminder |
-| `/api/tasks/delete` | POST | Delete a task |
-| `/api/tasks/edit-deadline` | POST | Edit task deadline |
+| Route                       | Method | Description                          |
+| --------------------------- | ------ | ------------------------------------ |
+| `/api/webhook`              | POST   | Receives Whapi messages              |
+| `/api/process`              | POST   | GPT-4o-mini task extraction          |
+| `/api/auth/register`        | POST   | User registration                    |
+| `/api/auth/verify-otp`      | POST   | Email OTP verification               |
+| `/api/auth/forgot-password` | POST   | Request password reset               |
+| `/api/auth/reset-password`  | POST   | Reset password with OTP              |
+| `/api/auth/check-user`      | POST   | Check if user exists and is verified |
+| `/api/cron/reminders`       | GET    | Deadline reminder scheduler          |
+| `/api/send-email`           | POST   | AWS SES email sender                 |
+| `/api/setup`                | POST   | Organisation setup                   |
+| `/api/tasks/update-status`  | POST   | Update task status                   |
+| `/api/tasks/snooze`         | POST   | Snooze a task                        |
+| `/api/tasks/reassign`       | POST   | Reassign a task                      |
+| `/api/tasks/resend`         | POST   | Resend reminder                      |
+| `/api/tasks/delete`         | POST   | Delete a task                        |
+| `/api/tasks/edit-deadline`  | POST   | Edit task deadline                   |
 
 ---
 
@@ -142,8 +142,6 @@ Every WhatsApp message goes through this pipeline. First it is filtered — bot 
 - Duplicate message prevention
 - CRON_SECRET protects scheduler endpoint
 - Environment variables never committed to git
-
----
 
 ## License
 

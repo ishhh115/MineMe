@@ -3,6 +3,8 @@ import { Geist_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "./providers";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
+import { RecaptchaProvider } from "@/components/recaptcha-provider"
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -31,8 +33,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          <TooltipProvider>{children}</TooltipProvider>
-        </Providers>
+  <RecaptchaProvider>
+    <TooltipProvider>{children}</TooltipProvider>
+  </RecaptchaProvider>
+</Providers>
       </body>
     </html>
   );

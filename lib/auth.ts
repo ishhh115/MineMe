@@ -1,15 +1,15 @@
 import type { NextAuthOptions } from "next-auth"
-import GoogleProvider from "next-auth/providers/google"
+//import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { sanityClient } from "@/lib/sanity"
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
+    /*GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    }), */
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -66,7 +66,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }: any) {
-      if (account?.provider === "google") {
+     /* if (account?.provider === "google") {
         try {
           const existing = await sanityClient.fetch(
             `*[_type == "user" && email == $email][0]`,
@@ -116,6 +116,7 @@ export const authOptions: NextAuthOptions = {
           return false
         }
       }
+      */
 
       return true
     },
@@ -127,7 +128,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role
         token.id = user.id
       }
-
+/*
       if (account?.provider === "google") {
         const sanityUser = await sanityClient.fetch(
           `*[_type == "user" && email == $email][0]`,
@@ -141,7 +142,7 @@ export const authOptions: NextAuthOptions = {
           token.isVerified = sanityUser.isVerified
         }
       }
-
+*/
       return token
     },
 

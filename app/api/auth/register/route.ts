@@ -3,6 +3,7 @@ import { randomInt } from "crypto"
 import bcrypt from "bcryptjs"
 import { sanityClient } from "@/lib/sanity"
 import { sendEmail, verificationCodeTemplate } from "@/lib/email"
+import { verifyRecaptcha } from "@/lib/recaptcha"
 
 export async function POST(request: Request) {
   try {

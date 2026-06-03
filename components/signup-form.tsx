@@ -18,9 +18,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const router = useRouter()
+  const { executeRecaptcha } = useGoogleReCaptcha()
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
@@ -46,11 +48,22 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     setLoading(true)
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email, password }),
-      })
+  const recaptchaToken = executeRecaptcha
+    ? await executeRecaptcha("signup")
+    : ""
+
+  const response = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      phone,
+      email,
+      password,
+      recaptchaToken,
+    }),
+  })
+      
 
       const data = await response.json()
 
@@ -66,15 +79,16 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
       )
 
       router.push(`/verify?email=${encodeURIComponent(email)}`)
-    } catch {
-      setError("Something went wrong. Please try again.")
-      setLoading(false)
-    }
+    } catch (error) {
+  console.error("Signup error:", error)
+  setError("Something went wrong. Please try again.")
+  setLoading(false)
+}
   }
 
-  const handleGoogleSignup = () => {
+  /*const handleGoogleSignup = () => {
     signIn("google", { callbackUrl: "/onboarding" })
-  }
+  }*/
 
   return (
     <Card {...props}>
@@ -161,9 +175,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
                 <Button type="submit" disabled={loading}>
                   {loading ? "Creating account..." : "Create Account"}
                 </Button>
-                <Button variant="outline" type="button" onClick={handleGoogleSignup}>
+              { /* <Button variant="outline" type="button" onClick={handleGoogleSignup}>
                   Sign up with Google
-                </Button>
+                </Button> */}
                 <FieldDescription className="px-6 text-center">
                   Already have an account? <a href="/login">Sign in</a>
                 </FieldDescription>

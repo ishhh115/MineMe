@@ -10,6 +10,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
+    console.log("========== WEBHOOK RECEIVED ==========")
+console.log(JSON.stringify(payload, null, 2))
+console.log("=====================================")
     const messages = payload.messages
 
     if (!messages || messages.length === 0) {

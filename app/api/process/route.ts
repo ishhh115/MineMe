@@ -151,6 +151,18 @@ Return:
   "confidence": 1
 }
 
+If multiple independent tasks exist in one message:
+
+Return:
+
+{
+  "isTask": false,
+  "action": "multiple_tasks",
+  "confidence": 1
+}
+
+Do not attempt to extract only one.
+
 Examples:
 
 Pending Tasks:
@@ -362,6 +374,13 @@ export async function POST(request: Request) {
   try {
     const { text, chatId, sender, messageId, timestamp, orgId } = await request.json()
 
+    if (!text || text.trim() === "") {
+  return NextResponse.json({
+    isTask: false,
+    message: "No text content"
+  })
+}
+
     if (!text) {
       return NextResponse.json({ message: "No text provided" }, { status: 400 })
     }
@@ -422,7 +441,7 @@ let analysis = await analyzeMessage(
     console.log("GPT ANALYSIS:", analysis)
 
 if (analysis) {
-  console.log("TARGET TASK:", analysis.targetTask)
+  console.log("TARGET TASK:", analysis?.targetTask)
 }
     console.log("CONTEXT:")
 console.log(conversationContext)
@@ -434,6 +453,13 @@ console.log(conversationContext)
     }
 
     console.log("Analysis result:", analysis)
+
+    if (analysis.action === "multiple_tasks") {
+  return NextResponse.json({
+    success: false,
+    message: "Multiple tasks detected"
+  })
+}
 
     if (analysis.action === "ambiguous_update") {
   return NextResponse.json({
@@ -540,6 +566,28 @@ if (analysis.action === "update_task") {
     }
 
     // Step 5: Save task to Sanity
+    const duplicateTask = await sanityClient.fetch(
+  `*[
+    _type == "task" &&
+    group._ref == $groupId &&
+    taskText == $taskText &&
+    assignedTo == $assignedTo &&
+    status == "pending"
+  ][0]`,
+  {
+    groupId,
+    taskText: analysis.taskText,
+    assignedTo: analysis.assignedTo,
+  }
+)
+
+if (duplicateTask) {
+  return NextResponse.json({
+    isTask: false,
+    message: "Duplicate task detected"
+  })
+}
+
     const task = await sanityClient.create({
       _type: "task",
       organisation: { _type: "reference", _ref: organisationId },

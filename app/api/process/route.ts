@@ -80,6 +80,22 @@ Definitions:
 
 new_task:
 - Creates a new task
+If the current message assigns work to one or more people,
+it is ALWAYS a new_task.
+
+Examples:
+
+"Rahul fix login bug"
+→ new_task
+
+"Sahil prepare investor deck"
+→ new_task
+
+"Rahul fix login bug and Sahil prepare investor deck"
+→ new_task
+
+Never classify an explicit assignment as update_task,
+even if a similar task already exists.
 
 update_task:
 - Updates an existing task
@@ -256,8 +272,12 @@ ${text}
     const content = response.choices[0]?.message?.content
     if (!content) return null
 
-    const result = JSON.parse(content)
-    return result
+    try {
+  return JSON.parse(content)
+} catch (err) {
+  console.error("Failed to parse GPT response:", content)
+  return null
+}
   } catch (error) {
     console.error("OpenAI error:", error)
     return null
@@ -398,8 +418,12 @@ let analysis = await analyzeMessage(
   text,
   conversationContext
 )
+
     console.log("GPT ANALYSIS:", analysis)
-    console.log("TARGET TASK:", analysis.targetTask)
+
+if (analysis) {
+  console.log("TARGET TASK:", analysis.targetTask)
+}
     console.log("CONTEXT:")
 console.log(conversationContext)
 

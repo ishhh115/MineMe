@@ -24,6 +24,36 @@ async function analyzeMessage(
 Today's date is ${todayDate}.
 You are analyzing a WhatsApp group conversation.
 
+IMPORTANT:
+
+All dates and times mentioned in messages are in Indian Standard Time (IST).
+
+When a user says:
+- "11 PM" → assume 11 PM IST
+- "tomorrow 5 PM" → assume 5 PM IST tomorrow
+- "today 8 PM" → assume 8 PM IST today
+
+Return ALL deadlines as UTC ISO timestamps.
+
+If the message contains:
+- in 15 minutes
+- by 15 minutes
+- after 2 hours
+- in 30 mins
+
+convert it relative to the current time.
+
+Examples:
+
+"by 11 PM"
+→ 2026-06-09T17:30:00.000Z
+
+"tomorrow 5 PM"
+→ 2026-06-10T11:30:00.000Z
+
+Never return local times.
+Always return UTC ISO strings.
+
 Use previous messages as context to understand:
 - task ownership
 - deadline updates
@@ -67,7 +97,7 @@ Return format:
 
 {
   "isTask": boolean,
-  "action": "new_task" | "update_task" | "complete_task" | "not_task" | "ambiguous_update",
+  "action": "new_task" | "update_task" | "complete_task" | "not_task" | "ambiguous_update" | "multiple_tasks" | "not_task",
   "targetTask": string|null,
   "taskText": string|null,
   "assignedTo": string|null,
@@ -75,6 +105,26 @@ Return format:
   "urgency": "high"|"medium"|"low"|null,
   "confidence": number
 }
+
+Messages that start with:
+
+- Assign
+- Reassign
+- Give
+- Move
+
+are usually reassign_task actions, not new_task actions.
+
+Examples:
+
+"Assign testing to Rahul"
+→ reassign_task
+
+"Move deployment to Sahil"
+→ reassign_task
+
+"Give checkout bug to Rahul"
+→ reassign_task
 
 Definitions:
 
@@ -133,6 +183,75 @@ For update_task:
 For complete_task:
 - targetTask MUST contain the task being completed.
 
+IMPORTANT:
+
+If a person's name appears before a verb, it is usually a new task assignment.
+
+Examples:
+
+"Rahul complete deployment"
+→ new_task
+
+"Sahil complete architecture"
+→ new_task
+
+"Azlan complete testing"
+→ new_task
+
+These are assignments, NOT completion messages.
+
+Only classify as complete_task when the message clearly indicates work has already been finished.
+
+Examples:
+
+"Rahul completed deployment"
+→ complete_task
+
+"Deployment is done"
+→ complete_task
+
+"Testing finished"
+→ complete_task
+
+"Bug fixed"
+→ complete_task
+
+reassign_task:
+- Changes ownership of an existing task
+- Does NOT create a new task
+
+Examples:
+
+Current message:
+"Assign designing to Sahil"
+
+Response:
+{
+  "isTask": true,
+  "action":"reassign_task",
+  "targetTask":"designing",
+  "taskText":null,
+  "assignedTo":"Sahil",
+  "deadline":null,
+  "urgency":null,
+  "confidence":0.9
+}
+
+Current message:
+"Give checkout bug to Rahul"
+
+Response:
+{
+  "isTask": true,
+  "action":"reassign_task",
+  "targetTask":"checkout bug",
+  "taskText":null,
+  "assignedTo":"Rahul",
+  "deadline":null,
+  "urgency":null,
+  "confidence":0.9
+}
+
 If multiple active tasks exist and the referenced task cannot be determined with high confidence:
 - action = "ambiguous_update"
 - targetTask = null
@@ -150,6 +269,7 @@ Return:
   "targetTask": null,
   "confidence": 1
 }
+  
 
 If multiple independent tasks exist in one message:
 
@@ -296,6 +416,41 @@ ${text}
   }
 }
 
+import stringSimilarity from "string-similarity"
+
+async function resolveAssignee(
+  assignee: string | null,
+  organisationId: string
+) {
+  if (!assignee) return null
+
+  const users = await sanityClient.fetch(
+    `*[_type == "user" && organisation._ref == $orgId]{
+      name
+    }`,
+    { orgId: organisationId }
+  )
+
+  console.log("USERS FOUND:", users)
+
+  const names = users.map((u: any) => u.name)
+
+  if (names.length === 0) {
+    return assignee
+  }
+
+  const match = stringSimilarity.findBestMatch(
+    assignee.toLowerCase(),
+    names.map((n: string) => n.toLowerCase())
+  )
+
+  if (match.bestMatch.rating > 0.75) {
+    return names[match.bestMatchIndex]
+  }
+
+  return assignee
+}
+
 function keywordFallback(text: string) {
   const taskKeywords = [
     "remind", "submit", "send", "call", "meeting", "deadline", "finish",
@@ -373,6 +528,44 @@ async function findOrCreateGroup(chatId: string, orgId: string) {
 export async function POST(request: Request) {
   try {
     const { text, chatId, sender, messageId, timestamp, orgId } = await request.json()
+
+    const lowerText = text.toLowerCase().trim()
+
+const reassignMatch =
+  lowerText.match(/^assign\s+(.+?)\s+to\s+(.+)$/)
+
+if (reassignMatch) {
+  const taskName = reassignMatch[1].trim()
+  const assignee = reassignMatch[2].trim()
+
+  const targetTask = await sanityClient.fetch(
+    `*[
+      _type == "task" &&
+      group->chatId == $chatId &&
+      status == "pending" &&
+      taskText match $taskText
+    ][0]`,
+    {
+      chatId,
+      taskText: `*${taskName}*`,
+    }
+  )
+
+  if (targetTask) {
+    await sanityClient
+      .patch(targetTask._id)
+      .set({
+        assignedTo: assignee,
+      })
+      .commit()
+
+    return NextResponse.json({
+      success: true,
+      action: "reassign_task",
+      taskId: targetTask._id,
+    })
+  }
+}
 
     if (!text || text.trim() === "") {
   return NextResponse.json({
@@ -453,6 +646,13 @@ console.log(conversationContext)
     }
 
     console.log("Analysis result:", analysis)
+
+    if (analysis?.assignedTo) {
+  analysis.assignedTo = await resolveAssignee(
+    analysis.assignedTo,
+    organisationId
+  )
+}
 
     if (analysis.action === "multiple_tasks") {
   return NextResponse.json({
@@ -544,6 +744,41 @@ if (analysis.action === "update_task") {
     taskId: targetTask._id,
   })
 }
+if (analysis.action === "reassign_task") {
+
+  const targetTask = await sanityClient.fetch(
+    `*[
+      _type == "task" &&
+      group->chatId == $chatId &&
+      status == "pending" &&
+      taskText match $taskText
+    ][0]`,
+    {
+      chatId,
+      taskText: `*${analysis.targetTask}*`,
+    }
+  )
+
+  if (!targetTask) {
+    return NextResponse.json({
+      success: false,
+      message: "Target task not found",
+    })
+  }
+
+  await sanityClient
+    .patch(targetTask._id)
+    .set({
+      assignedTo: analysis.assignedTo,
+    })
+    .commit()
+
+  return NextResponse.json({
+    success: true,
+    action: "reassign_task",
+    taskId: targetTask._id,
+  })
+}
 
     if (!analysis.isTask || analysis.confidence < 0.5) {
       return NextResponse.json({ isTask: false, message: "Not a task" })
@@ -565,21 +800,72 @@ if (analysis.action === "update_task") {
       }
     }
 
-    // Step 5: Save task to Sanity
-    const duplicateTask = await sanityClient.fetch(
+    let resolvedAssignee = analysis.assignedTo
+
+if (analysis.assignedTo) {
+  const users = await sanityClient.fetch(
+    `*[_type == "user" && organisation._ref == $orgId]{
+      name
+    }`,
+    { orgId: organisationId }
+  )
+
+  const names = users.map((u: any) => u.name?.toLowerCase())
+
+  const match = names.find(
+    (name: string) =>
+      name.includes(analysis.assignedTo.toLowerCase()) ||
+      analysis.assignedTo.toLowerCase().includes(name)
+  )
+
+  if (match) {
+    resolvedAssignee = match
+  }
+}
+
+
+const existingTasks = await sanityClient.fetch(
   `*[
     _type == "task" &&
     group._ref == $groupId &&
-    taskText == $taskText &&
     assignedTo == $assignedTo &&
     status == "pending"
-  ][0]`,
+  ]{
+    _id,
+    taskText
+  }`,
   {
     groupId,
-    taskText: analysis.taskText,
-    assignedTo: analysis.assignedTo,
+    assignedTo: resolvedAssignee,
   }
 )
+
+    // Step 5: Save task to Sanity
+ const normalizedNewTask =
+  analysis.taskText
+    ?.toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .trim() || ""
+
+let duplicateTask = null
+
+for (const task of existingTasks) {
+  const normalizedExisting =
+    task.taskText
+      ?.toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .trim() || ""
+
+  const similarity = stringSimilarity.compareTwoStrings(
+    normalizedNewTask,
+    normalizedExisting
+  )
+
+  if (similarity > 0.8) {
+    duplicateTask = task
+    break
+  }
+}
 
 if (duplicateTask) {
   return NextResponse.json({
@@ -588,37 +874,73 @@ if (duplicateTask) {
   })
 }
 
-    const task = await sanityClient.create({
-      _type: "task",
-      organisation: { _type: "reference", _ref: organisationId },
-      group: { _type: "reference", _ref: groupId },
-      taskText: analysis.taskText || text,
-      assignedTo: analysis.assignedTo,
-      deadline: deadlineISO,
-      urgency: analysis.urgency || "low",
-      status: "pending",
-      source: "ai",
-      whatsappStatus: "awaiting_response",
-      originalMessage: text,
-      messageId: messageId || `msg_${Date.now()}`,
-      sender: sender || "unknown",
-      confidence: analysis.confidence,
-      timeline: [
-        {
-          event: "Task extracted from WhatsApp message",
-          timestamp: new Date().toISOString(),
-          actor: "system",
-        },
-      ],
-      actionsLog: [],
-      createdAt: new Date().toISOString(),
-    })
+    let reminderAt = null
 
+if (deadlineISO) {
+  const deadlineDate = new Date(deadlineISO)
+  const now = new Date()
+
+  const isSameDay =
+    deadlineDate.getDate() === now.getDate() &&
+    deadlineDate.getMonth() === now.getMonth() &&
+    deadlineDate.getFullYear() === now.getFullYear()
+
+  if (isSameDay) {
+ let reminderAt = null
+
+if (analysis.deadline) {
+  const deadlineDate = new Date(analysis.deadline)
+
+  reminderAt = new Date(
+    deadlineDate.getTime() - 2 * 60 * 60 * 1000
+  ).toISOString()
+}
+} else {
+    // Future day → previous day 8 PM
+    const reminderDate = new Date(deadlineDate)
+
+    reminderDate.setDate(reminderDate.getDate() - 1)
+    reminderDate.setHours(20, 0, 0, 0)
+
+    reminderAt = reminderDate.toISOString()
+  }
+}
+
+const task = await sanityClient.create({
+  _type: "task",
+  organisation: { _type: "reference", _ref: organisationId },
+  group: { _type: "reference", _ref: groupId },
+  taskText: analysis.taskText || text,
+  assignedTo: resolvedAssignee,
+  deadline: deadlineISO,
+
+  reminderAt, // <-- NEW FIELD
+
+  urgency: analysis.urgency || "low",
+  status: "pending",
+  source: "ai",
+  whatsappStatus: "pending",
+  originalMessage: text,
+  messageId: messageId || `msg_${Date.now()}`,
+  sender: sender || "unknown",
+  confidence: analysis.confidence,
+  timeline: [
+    {
+      event: "Task extracted from WhatsApp message",
+      timestamp: new Date().toISOString(),
+      actor: "system",
+    },
+  ],
+  actionsLog: [],
+  createdAt: new Date().toISOString(),
+})
+console.log("GROUP ID USED FOR COUNTER:", groupId)
     // Step 6: Update group task count
     await sanityClient
-      .patch(groupId)
-      .inc({ tasksExtracted: 1 })
-      .commit()
+     .patch(groupId)
+.setIfMissing({ tasksExtracted: 0 })
+.inc({ tasksExtracted: 1 })
+.commit()
 
     return NextResponse.json({
       isTask: true,

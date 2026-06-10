@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { sanityClient } from "@/lib/sanity"
+import { sendWhatsAppMessage } from "@/lib/whapi"
 
 // Verify GET request from Whapi when setting up webhook
 export async function GET() {
@@ -39,7 +40,7 @@ console.log("=====================================")
 
       // Step 1: Check if this is a reply to a reminder (1, 2, or 3)
       const trimmedText = text.trim()
-      if (["1", "2", "3"].includes(trimmedText)) {
+      if (["1", "2"].includes(trimmedText)) {
         await handleReminderReply({ chatId, sender, reply: trimmedText })
         continue
       }
@@ -54,8 +55,10 @@ console.log("=====================================")
       const cleanedText = cleanMessage(text)
 
       // Step 5: Send to AI for task detection
+      console.log("Calling AI processor...")
       await processMessage({ chatId, sender, cleanedText, timestamp, messageId })
     }
+    console.log("AI processor finished")
 
     return NextResponse.json({ status: "ok" })
   } catch (error) {
@@ -125,6 +128,13 @@ async function handleReminderReply({
 
       console.log("Task marked complete:", task._id)
 
+      await sendWhatsAppMessage(
+  chatId,
+  `✅ Task marked as completed.
+
+Task: ${task.taskText}`
+)
+
       // TODO: Send confirmation back via Whapi when credentials arrive
       // await sendWhatsAppMessage(chatId, "✅ Task marked as complete. Well done!")
 
@@ -158,10 +168,17 @@ async function handleReminderReply({
 
       console.log("Task snoozed:", task._id)
 
+
+      await sendWhatsAppMessage(
+  chatId,
+  `⏰ Task snoozed for 2 hours.
+
+Task: ${task.taskText}`
+)
       // TODO: Send confirmation back via Whapi when credentials arrive
       // await sendWhatsAppMessage(chatId, `⏰ Task snoozed until ${new Date(snoozeUntil).toLocaleTimeString()}`)
 
-    } else if (reply === "3") {
+    }/* else if (reply === "3") {
       // Reassign — ask who to reassign to
       await sanityClient
         .patch(task._id)
@@ -178,7 +195,7 @@ async function handleReminderReply({
 
       // TODO: Send message asking who to reassign to via Whapi
       // await sendWhatsAppMessage(chatId, "🔄 Who should this task be reassigned to? Reply with their name.")
-    }
+    }*/
 
   } catch (error) {
     console.error("Reply handler error:", error)
@@ -220,6 +237,7 @@ async function storeRawMessage({
       `*[_type == "group" && chatId == $chatId][0]{ _id, "organisationId": organisation._ref }`,
       { chatId }
     )
+    console.log("Group found:", group)
 
     const orgId = group?.organisationId
     if (!orgId || !group?._id) return
@@ -233,26 +251,34 @@ async function storeRawMessage({
     if (existing) return
 
     // Save raw message
-    await sanityClient.create({
-      _type: "message",
-      organisation: { _type: "reference", _ref: orgId },
-      group: { _type: "reference", _ref: group._id },
-      messageId,
-      chatId,
-      sender,
-      text,
-      timestamp: new Date(timestamp * 1000).toISOString(),
-      isTask: false,
-      processed: false,
-      createdAt: new Date().toISOString(),
-    })
+    // Save raw message
+await sanityClient.create({
+  _type: "message",
+  organisation: {
+    _type: "reference",
+    _ref: orgId,
+  },
+  group: {
+    _type: "reference",
+    _ref: group._id,
+  },
+  messageId,
+  chatId,
+  sender,
+  text,
+  timestamp: new Date(timestamp * 1000).toISOString(),
+  isTask: false,
+  processed: false,
+  createdAt: new Date().toISOString(),
+})
 
     // Update group message count
     await sanityClient
       .patch(group._id)
-      .inc({ messagesCount: 1 })
-      .set({ lastMessageAt: new Date().toISOString() })
-      .commit()
+.setIfMissing({ messagesCount: 0 })
+.inc({ messagesCount: 1 })
+.set({ lastMessageAt: new Date().toISOString() })
+.commit()
 
   } catch (error) {
     console.error("Store message error:", error)
@@ -278,22 +304,53 @@ async function processMessage({
       `*[_type == "group" && chatId == $chatId][0]{ "organisationId": organisation._ref }`,
       { chatId }
     )
+
+    console.log("Group found:", group)
+
     const orgId = group?.organisationId
 
-    if (!orgId) return
+    if (!orgId) {
+      console.log("Creating missing group:", chatId)
 
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: cleanedText,
+      const defaultOrgId = process.env.NEXT_PUBLIC_ORG_ID
+
+      const newGroup = await sanityClient.create({
+        _type: "group",
         chatId,
-        sender,
-        messageId,
-        timestamp,
-        orgId,
-      }),
-    })
+        name: chatId,
+        organisation: {
+          _type: "reference",
+          _ref: defaultOrgId,
+        },
+        isMonitoring: true,
+        messagesCount: 0,
+        tasksExtracted: 0,
+        completedTasksCount: 0,
+        completionPercentage: 0,
+        createdAt: new Date().toISOString(),
+      })
+
+      console.log("Created group:", newGroup._id)
+      return
+    }
+
+    const response = await fetch(
+      `${process.env.NEXTAUTH_URL}/api/process`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: cleanedText,
+          chatId,
+          sender,
+          messageId,
+          timestamp,
+          orgId,
+        }),
+      }
+    )
 
     const result = await response.json()
     console.log("Process result:", result)
@@ -301,3 +358,4 @@ async function processMessage({
     console.error("Process message error:", error)
   }
 }
+    

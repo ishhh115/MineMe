@@ -146,7 +146,7 @@ export default async function DashboardPage() {
                 <MessageCircleIcon className="size-5 text-slate-200" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">MineMe Dashboard</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">MindMe Dashboard</p>
                 <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Operational Overview</h1>
                 <p className="mt-2 max-w-xl text-sm text-slate-200/90">Track tasks, deadlines, reminders, and conversion from chat to execution.</p>
               </div>

@@ -220,6 +220,262 @@ reassign_task:
 - Changes ownership of an existing task
 - Does NOT create a new task
 
+TASK CLASSIFICATION RULES
+
+The current message is ALWAYS more important than previous context.
+
+Previous tasks are only used to:
+
+* identify updates
+* identify completions
+* identify reassignments
+
+Never use previous tasks to convert an explicit assignment into an update.
+
+---
+
+NEW TASK
+
+A message is a new_task when:
+
+* A person's name appears before an action verb
+* Someone is assigned work
+* Someone is requested to do something
+* A deliverable is requested
+* A deadline-bound action is assigned
+
+Examples:
+
+"Sahil test reminder"
+
+"Isha check error by 2 PM"
+
+"Rahul submit report"
+
+"Sahil complete deployment"
+
+"Rahul finish testing"
+
+Response:
+
+{
+"isTask": true,
+"action": "new_task"
+}
+
+IMPORTANT:
+
+If a person's name appears at the start of the message and is followed by an action verb, ALWAYS classify as new_task.
+
+Common action verbs:
+
+fix
+check
+review
+test
+complete
+finish
+prepare
+submit
+send
+deploy
+update
+create
+build
+design
+verify
+investigate
+call
+follow up
+
+Never classify these as update_task.
+
+---
+
+UPDATE TASK
+
+A message is update_task only when it modifies an existing task.
+
+Examples:
+
+"Move deadline to Friday"
+
+"Change deadline to tomorrow"
+
+"Assign this task to Rahul"
+
+"Add testing notes"
+
+Requirements:
+
+* targetTask must be identified
+* targetTask must exist in context
+
+If targetTask cannot be identified confidently:
+
+{
+"isTask": false,
+"action": "ambiguous_update",
+"targetTask": null,
+"confidence": 1
+}
+
+Never guess.
+
+---
+
+COMPLETE TASK
+
+A message is complete_task only when work is clearly already finished.
+
+Examples:
+
+"Done"
+
+"Completed"
+
+"Finished"
+
+"Bug fixed"
+
+"Deployment completed"
+
+"Testing is done"
+
+Response:
+
+{
+"isTask": true,
+"action": "complete_task"
+}
+
+IMPORTANT:
+
+"Rahul complete deployment"
+
+is NOT a completion.
+
+It is:
+
+{
+"isTask": true,
+"action": "new_task"
+}
+
+because Rahul is being assigned work.
+
+---
+
+REASSIGN TASK
+
+A message is reassign_task when ownership changes.
+
+Examples:
+
+"Assign testing to Rahul"
+
+"Give checkout bug to Rahul"
+
+"Move deployment to Sahil"
+
+Response:
+
+{
+"isTask": true,
+"action": "reassign_task"
+}
+
+---
+
+MULTIPLE TASKS
+
+If multiple independent tasks appear:
+
+"Sahil test login and Rahul prepare report"
+
+Return:
+
+{
+"isTask": false,
+"action": "multiple_tasks",
+"confidence": 1
+}
+
+Do not extract only one task.
+
+---
+
+TASK TEXT RULES
+
+taskText must describe actual work.
+
+Never use:
+
+* task
+* this task
+* that task
+* complete task
+* do task
+* finish task
+
+Bad:
+
+{
+"taskText": "complete the task"
+}
+
+Good:
+
+{
+"taskText": "complete deployment"
+}
+
+If actual work cannot be determined:
+
+{
+"isTask": false,
+"action": "ambiguous_update"
+}
+
+---
+
+CONTEXT PRIORITY
+
+Current message > Previous context
+
+Example:
+
+Previous task:
+"test reminder"
+
+Current message:
+"Sahil check error by 2 PM"
+
+Response:
+
+{
+"action": "new_task",
+"taskText": "check error",
+"assignedTo": "Sahil"
+}
+
+Never convert this into an update to "test reminder".
+
+---
+
+NAME MATCHING
+
+If a name is slightly misspelled:
+
+sahil
+sahul
+sahill
+
+Treat them as the same person if confidence is high.
+
+Extract the name exactly as written.
+
+
 Examples:
 
 Current message:
@@ -501,7 +757,11 @@ async function checkRateLimit(organisationId: string): Promise<boolean> {
   }
 }
 
-async function findOrCreateGroup(chatId: string, orgId: string) {
+async function findOrCreateGroup(
+  chatId: string,
+  orgId: string,
+  groupName?: string
+) {
   const existing = await sanityClient.fetch(
     `*[_type == "group" && chatId == $chatId && organisation._ref == $orgId][0]`,
     { chatId, orgId }
@@ -510,9 +770,9 @@ async function findOrCreateGroup(chatId: string, orgId: string) {
   if (existing) return existing._id
 
   const newGroup = await sanityClient.create({
-    _type: "group",
-    chatId,
-    name: `Group ${chatId.slice(0, 8)}`,
+  _type: "group",
+  chatId,
+  name: groupName || chatId,
     organisation: { _type: "reference", _ref: orgId },
     isMonitoring: true,
     messagesCount: 0,
@@ -527,8 +787,15 @@ async function findOrCreateGroup(chatId: string, orgId: string) {
 
 export async function POST(request: Request) {
   try {
-    const { text, chatId, sender, messageId, timestamp, orgId } = await request.json()
-
+    const {
+  text,
+  chatId,
+  groupName,
+  sender,
+  messageId,
+  timestamp,
+  orgId,
+} = await request.json()
     const lowerText = text.toLowerCase().trim()
 
 const reassignMatch =
@@ -586,13 +853,23 @@ if (reassignMatch) {
 
     // Check if message already processed to prevent loops
     const alreadyProcessed = await sanityClient.fetch(
-      `*[_type == "task" && messageId == $messageId][0]`,
-      { messageId: messageId || "" }
-    )
+  `*[_type == "task" && messageId == $messageId][0]{
+    _id,
+    originalMessage
+  }`,
+  { messageId: messageId || "" }
+)
 
-    if (alreadyProcessed) {
-      return NextResponse.json({ message: "Already processed", isTask: false })
-    }
+const isEditedMessage =
+  alreadyProcessed &&
+  alreadyProcessed.originalMessage !== text
+
+    if (alreadyProcessed && !isEditedMessage) {
+  return NextResponse.json({
+    message: "Already processed",
+    isTask: false
+  })
+}
 
     // Check rate limit before calling OpenAI
     const withinLimit = await checkRateLimit(organisationId)
@@ -625,11 +902,82 @@ Deadline: ${task.deadline || "None"}
 Status: ${task.status || "pending"}
 `)
   .join("\n")
+ const explicitAssignmentRegex =
+ /^([a-zA-Z]+)\s+(fix|check|review|test|complete|finish|prepare|submit|send|deploy|update|create|build|design|verify|investigate|call|follow\s+up|make|do)\b/i
 
-let analysis = await analyzeMessage(
-  text,
-  conversationContext
-)
+const explicitMatch = text.trim().match(explicitAssignmentRegex)
+
+
+let analysis
+
+if (explicitMatch) {
+  const assignee = explicitMatch[1]
+
+  const taskText = text
+    .replace(new RegExp(`^${assignee}\\s+`, "i"), "")
+    .trim()
+
+  /*analysis = {
+    isTask: true,
+    action: "new_task",
+    targetTask: null,
+    taskText,
+    assignedTo: assignee,
+    deadline: null,
+    urgency: "low",
+    confidence: 1,
+  }*/
+
+    let deadline = null
+
+const deadlineMatch =
+  text.match(/\bby\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
+
+if (deadlineMatch) {
+  const date = new Date()
+
+  let hour = parseInt(deadlineMatch[1])
+
+  if (
+    deadlineMatch[3].toLowerCase() === "pm" &&
+    hour !== 12
+  ) {
+    hour += 12
+  }
+
+  if (
+    deadlineMatch[3].toLowerCase() === "am" &&
+    hour === 12
+  ) {
+    hour = 0
+  }
+
+  date.setHours(hour)
+  date.setMinutes(deadlineMatch[2] ? parseInt(deadlineMatch[2]) : 0)
+  date.setSeconds(0)
+  date.setMilliseconds(0)
+
+  deadline = date.toISOString()
+}
+
+analysis = {
+  isTask: true,
+  action: "new_task",
+  targetTask: null,
+  taskText,
+  assignedTo: assignee,
+  deadline,
+  urgency: deadline ? "high" : "low",
+  confidence: 1,
+}
+
+  console.log("RULE BASED TASK:", analysis)
+} else {
+  analysis = await analyzeMessage(
+    text,
+    conversationContext
+  )
+}
 
     console.log("GPT ANALYSIS:", analysis)
 
@@ -745,7 +1093,7 @@ if (analysis.action === "update_task") {
   })
 }
 if (analysis.action === "reassign_task") {
-
+    
   const targetTask = await sanityClient.fetch(
     `*[
       _type == "task" &&
@@ -780,12 +1128,25 @@ if (analysis.action === "reassign_task") {
   })
 }
 
+
     if (!analysis.isTask || analysis.confidence < 0.5) {
       return NextResponse.json({ isTask: false, message: "Not a task" })
     }
 
     // Step 3: Find or create group
-    const groupId = await findOrCreateGroup(chatId || "unknown", organisationId)
+    const groupId = await findOrCreateGroup(
+  chatId || "unknown",
+  organisationId,
+  groupName
+)
+if (groupName) {
+  await sanityClient
+    .patch(groupId)
+    .set({
+      name: groupName,
+    })
+    .commit()
+}
 
     // Step 4: Parse deadline if present
     let deadlineISO = null
@@ -801,6 +1162,7 @@ if (analysis.action === "reassign_task") {
     }
 
     let resolvedAssignee = analysis.assignedTo
+    
 
 if (analysis.assignedTo) {
   const users = await sanityClient.fetch(
@@ -821,6 +1183,25 @@ if (analysis.assignedTo) {
   if (match) {
     resolvedAssignee = match
   }
+}
+
+if (alreadyProcessed && isEditedMessage) {
+  await sanityClient
+    .patch(alreadyProcessed._id)
+    .set({
+      taskText: analysis.taskText,
+      assignedTo: resolvedAssignee,
+      deadline: deadlineISO,
+      originalMessage: text,
+      confidence: analysis.confidence,
+    })
+    .commit()
+
+  return NextResponse.json({
+    success: true,
+    action: "edited_task",
+    taskId: alreadyProcessed._id,
+  })
 }
 
 
@@ -874,10 +1255,11 @@ if (duplicateTask) {
   })
 }
 
-    let reminderAt = null
+let reminderAt = null
 
 if (deadlineISO) {
   const deadlineDate = new Date(deadlineISO)
+
   const now = new Date()
 
   const isSameDay =
@@ -886,17 +1268,10 @@ if (deadlineISO) {
     deadlineDate.getFullYear() === now.getFullYear()
 
   if (isSameDay) {
- let reminderAt = null
-
-if (analysis.deadline) {
-  const deadlineDate = new Date(analysis.deadline)
-
-  reminderAt = new Date(
-    deadlineDate.getTime() - 2 * 60 * 60 * 1000
-  ).toISOString()
-}
-} else {
-    // Future day → previous day 8 PM
+    reminderAt = new Date(
+      deadlineDate.getTime() - 2 * 60 * 60 * 1000
+    ).toISOString()
+  } else {
     const reminderDate = new Date(deadlineDate)
 
     reminderDate.setDate(reminderDate.getDate() - 1)
@@ -906,6 +1281,10 @@ if (analysis.deadline) {
   }
 }
 
+console.log("DEADLINE:", deadlineISO)
+console.log("REMINDER AT:", reminderAt)
+
+console.log("PROCESS ORG:", organisationId)
 const task = await sanityClient.create({
   _type: "task",
   organisation: { _type: "reference", _ref: organisationId },

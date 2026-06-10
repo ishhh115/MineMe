@@ -63,7 +63,7 @@ export function taskReminderTemplate({
               <div style="width:32px;height:32px;background:#10b981;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                 <span style="color:black;font-size:16px;">💬</span>
               </div>
-              <span style="color:#10b981;font-weight:600;font-size:14px;">MineMe</span>
+              <span style="color:#10b981;font-weight:600;font-size:14px;">MindMe</span>
             </div>
             <h1 style="margin:0;color:white;font-size:22px;font-weight:700;">Task Reminder</h1>
             <p style="margin:8px 0 0;color:#6b7280;font-size:13px;">You have a task that needs attention</p>
@@ -95,7 +95,7 @@ export function taskReminderTemplate({
             </div>
 
             <p style="margin:0;color:#6b7280;font-size:12px;text-align:center;">
-              This reminder was sent automatically by MineMe
+              This reminder was sent automatically by MindMe
             </p>
           </div>
 
@@ -126,7 +126,7 @@ export function verificationCodeTemplate({
               <div style="width:32px;height:32px;background:#10b981;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                 <span style="color:black;font-size:16px;">💬</span>
               </div>
-              <span style="color:#10b981;font-weight:600;font-size:14px;">MineMe</span>
+              <span style="color:#10b981;font-weight:600;font-size:14px;">MindMe</span>
             </div>
             <h1 style="margin:0;color:white;font-size:22px;font-weight:700;">Verify your account</h1>
             <p style="margin:8px 0 0;color:#6b7280;font-size:13px;">Use the one-time code below to finish signing up.</p>
@@ -176,7 +176,7 @@ export function passwordResetTemplate({
               <div style="width:32px;height:32px;background:#10b981;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                 <span style="color:black;font-size:16px;">💬</span>
               </div>
-              <span style="color:#10b981;font-weight:600;font-size:14px;">MineMe</span>
+              <span style="color:#10b981;font-weight:600;font-size:14px;">MindMe</span>
             </div>
             <h1 style="margin:0;color:white;font-size:22px;font-weight:700;">Reset your password</h1>
             <p style="margin:8px 0 0;color:#6b7280;font-size:13px;">Use the code below or the reset link to create a new password.</p>

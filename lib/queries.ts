@@ -17,6 +17,7 @@ export async function getDashboardStats(organisationId: string) {
     { orgId: organisationId }
   )
   return stats
+  console.log("FETCHING STATS FOR:", organisationId)
 }
 
 // Get recent activity
@@ -219,7 +220,7 @@ export async function resendReminder(taskId: string) {
   if (task.organisation?.notificationPreferences?.email && task.sender) {
     const emailResult = await sendEmail({
       to: task.sender,
-      subject: `MineMe Reminder: ${task.taskText}`,
+      subject: `MindMe Reminder: ${task.taskText}`,
       htmlBody: taskReminderTemplate({
         taskText: task.taskText,
         assignedTo: task.assignedTo || "Unassigned",

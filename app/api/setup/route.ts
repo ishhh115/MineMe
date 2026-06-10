@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // Create organisation
     const organisation = await sanityClient.create({
       _type: "organisation",
-      name: name || "MineMe",
+      name: name || "MindMe",
       slug: {
         _type: "slug",
         current: (name || "whatsapp-bot").toLowerCase().replace(/\s+/g, "-"),

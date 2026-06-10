@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MineMe",
-  description: "MineMe helps companies extract tasks from WhatsApp and manage them in one dashboard.",
+  title: "MindMe",
+  description: "MindMe helps companies extract tasks from WhatsApp and manage them in one dashboard.",
 };
 
 export default function RootLayout({

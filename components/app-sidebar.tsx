@@ -89,7 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <MessageCircleIcon className="size-4" />
               </div>
               <div className="flex flex-col gap-0.5 leading-none transition-opacity duration-200 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none">
-                <span className="font-semibold tracking-tight">MineMe</span>
+                <span className="font-semibold tracking-tight">MindMe</span>
                 <span className="text-xs text-sidebar-foreground/65">Task Manager</span>
               </div>
             </SidebarMenuButton>

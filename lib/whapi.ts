@@ -49,6 +49,53 @@
     }
   }
 
+  export async function sendInteractiveReminder(
+  chatId: string,
+  message: string,
+  token?: string
+) {
+  const response = await fetch(
+    `${WHAPI_URL}/messages/interactive`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token || WHAPI_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: chatId,
+        type: "button",
+        body: {
+          text: message,
+        },
+        action: {
+          buttons: [
+            {
+              type: "quick_reply",
+              title: "✅ Done",
+              id: "done",
+            },
+            {
+              type: "quick_reply",
+              title: "⏰ Snooze",
+              id: "snooze",
+            },
+          ],
+        },
+      }),
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    console.error("Interactive message error:", data)
+    return { success: false, error: data }
+  }
+
+  return { success: true, data }
+}
+
   // Format reminder message for WhatsApp
   export function formatReminderMessage({
     taskText,
@@ -76,18 +123,14 @@
         })
       : "No deadline set"
 
-    return `${urgencyEmoji} *MineMe Reminder*
+  return `${urgencyEmoji} *MindMe Reminder*
 
-  *Task:* ${taskText}
-  ${assignedTo ? `*Assigned to:* ${assignedTo}` : ""}
-  *Deadline:* ${deadlineText}
-  ${groupName ? `*Group:* ${groupName}` : ""}
+*Task:* ${taskText}
+${assignedTo ? `*Assigned to:* ${assignedTo}` : ""}
+*Deadline:* ${deadlineText}
 
-  Reply with:
-  *1* — ✅ Mark as Done
-  *2* — ⏰ Snooze 2 hours
 
-  _Powered by MineMe_`
+_Powered by MindMe_`
   }
 
   // Send reminder to assigned person
@@ -122,5 +165,9 @@
   console.log("REMINDER BODY:", message)
   console.log("TOKEN:", token?.slice(0, 10))
 
-  return await sendWhatsAppMessage(chatId, message, { token, baseUrl })
+  return await sendInteractiveReminder(
+  chatId,
+  message,
+  token
+)
   }

@@ -41,6 +41,11 @@ export const task = {
       type: "datetime",
     },
     {
+  name: "reminderAt",
+  title: "Reminder At",
+  type: "datetime",
+},
+    {
       name: "urgency",
       title: "Urgency",
       type: "string",

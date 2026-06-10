@@ -47,7 +47,7 @@ export default function OnboardingPage() {
         <div className="p-2 rounded-xl bg-emerald-400/10">
           <MessageCircleIcon className="size-6 text-emerald-400" />
         </div>
-        <span className="text-lg font-semibold">MineMe</span>
+        <span className="text-lg font-semibold">MindMe</span>
       </div>
 
       <div className="w-full max-w-2xl mb-8">
@@ -83,7 +83,7 @@ export default function OnboardingPage() {
                 <MessageCircleIcon className="size-12 text-emerald-400" />
               </div>
               <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Welcome to MineMe</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Welcome to MindMe</h1>
                 <p className="text-muted-foreground text-sm leading-relaxed max-w-md">Automatically extracts tasks from WhatsApp conversations and sends deadline reminders.</p>
               </div>
 
@@ -187,7 +187,7 @@ export default function OnboardingPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <h2 className="text-3xl font-bold tracking-tight">You are all set</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-md">Your MineMe workspace is ready. It will now monitor your selected groups, extract tasks automatically, and send you smart reminders before deadlines.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-md">Your MindMe workspace is ready. It will now monitor your selected groups, extract tasks automatically, and send you smart reminders before deadlines.</p>
               </div>
               <div className="flex flex-col gap-2 w-full">
                 {[`Bot configured`, `${selectedGroups.length} groups being monitored`, "Task extraction active", "Deadline reminders configured"].map((item) => (

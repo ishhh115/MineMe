@@ -9,6 +9,7 @@ export async function getDashboardData() {
 
     // Get org ID from session
     const orgId = (session?.user as { organisationId?: string } | undefined)?.organisationId
+    console.log("SESSION ORG:", orgId)
 
     if (!orgId) {
       return {

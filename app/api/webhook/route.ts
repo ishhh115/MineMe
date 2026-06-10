@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { sanityClient } from "@/lib/sanity"
 import { sendWhatsAppMessage } from "@/lib/whapi"
+import { message } from "@/sanity/schemas/message"
 
 // Verify GET request from Whapi when setting up webhook
 export async function GET() {
@@ -21,17 +22,60 @@ console.log("=====================================")
     }
 
     for (const message of messages) {
-      // Only process text messages
-      if (message.type !== "text") continue
+     // Process text messages and button replies
+// Handle edited WhatsApp messages
+if (
+  message.type === "action" &&
+  message.action?.type === "edit"
+) {
+  const editedText =
+    message.action?.edited_content?.body
+
+  const originalMessageId =
+    message.action?.target
+
+  console.log(
+    "EDITED MESSAGE DETECTED:",
+    editedText
+  )
+
+  if (editedText) {
+    await processMessage({
+  chatId: message.chat_id,
+  groupName: message.chat_name,
+  sender: message.from,
+  cleanedText: cleanMessage(editedText),
+  timestamp: message.timestamp,
+  messageId: originalMessageId,
+})
+  }
+
+  continue
+}
+
+// Process text messages and button replies
+if (
+  message.type !== "text" &&
+  !(message.type === "reply" &&
+    message.reply?.type === "buttons_reply")
+) {
+  continue
+}
 
       const chatId = message.chat_id
       const sender = message.from
-      const text = message.text?.body
       const timestamp = message.timestamp
       const messageId = message.id
 
-      // Skip if no text
-      if (!text) continue
+      const text = message.text?.body
+
+const buttonReply =
+  message.reply?.buttons_reply?.id || null
+
+// Skip only if neither text nor button exists
+if (!text && !buttonReply) continue
+
+  
 
       // Skip if message is from the bot itself
       if (message.from_me) continue
@@ -39,11 +83,26 @@ console.log("=====================================")
       console.log("New message received:", { chatId, sender, text, timestamp, messageId })
 
       // Step 1: Check if this is a reply to a reminder (1, 2, or 3)
-      const trimmedText = text.trim()
-      if (["1", "2"].includes(trimmedText)) {
-        await handleReminderReply({ chatId, sender, reply: trimmedText })
-        continue
-      }
+      const trimmedText = text?.trim()
+
+if (
+  ["1", "2"].includes(trimmedText || "") ||
+  buttonReply === "ButtonsV3:done" ||
+  buttonReply === "ButtonsV3:snooze"
+) {
+  await handleReminderReply({
+    chatId,
+    sender,
+    reply:
+      buttonReply === "ButtonsV3:done"
+        ? "1"
+        : buttonReply === "ButtonsV3:snooze"
+        ? "2"
+        : trimmedText!,
+  })
+
+  continue
+}
 
       // Step 2: Skip very short messages that are not replies
       if (trimmedText.split(" ").length < 3) continue
@@ -56,7 +115,14 @@ console.log("=====================================")
 
       // Step 5: Send to AI for task detection
       console.log("Calling AI processor...")
-      await processMessage({ chatId, sender, cleanedText, timestamp, messageId })
+      await processMessage({
+  chatId,
+  groupName: message.chat_name,
+  sender,
+  cleanedText,
+  timestamp,
+  messageId,
+})
     }
     console.log("AI processor finished")
 
@@ -288,17 +354,19 @@ await sanityClient.create({
 // Send to AI for task detection
 async function processMessage({
   chatId,
+  groupName,
   sender,
   cleanedText,
   timestamp,
   messageId,
 }: {
   chatId: string
+  groupName?: string
   sender: string
   cleanedText: string
   timestamp: number
   messageId: string
-}) {
+}){
   try {
     const group = await sanityClient.fetch(
       `*[_type == "group" && chatId == $chatId][0]{ "organisationId": organisation._ref }`,
@@ -341,14 +409,15 @@ async function processMessage({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          text: cleanedText,
-          chatId,
-          sender,
-          messageId,
-          timestamp,
-          orgId,
-        }),
+       body: JSON.stringify({
+  text: cleanedText,
+  chatId,
+  groupName: message.chat_name,
+  sender,
+  messageId,
+  timestamp,
+  orgId,
+}),
       }
     )
 

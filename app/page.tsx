@@ -82,7 +82,7 @@ export default function LandingPage() {
             <div className="p-1.5 rounded-lg bg-emerald-400/10">
               <MessageCircleIcon className="size-5 text-emerald-400" />
             </div>
-            <span className="font-semibold text-base">MineMe</span>
+            <span className="font-semibold text-base">MindMe</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login">
@@ -140,7 +140,7 @@ export default function LandingPage() {
               <div className="size-3 rounded-full bg-red-400/60" />
               <div className="size-3 rounded-full bg-yellow-400/60" />
               <div className="size-3 rounded-full bg-emerald-400/60" />
-              <span className="text-xs text-muted-foreground ml-2">MineMe — Dashboard</span>
+              <span className="text-xs text-muted-foreground ml-2">MindMe — Dashboard</span>
             </div>
             <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -273,7 +273,7 @@ export default function LandingPage() {
               <MessageCircleIcon className="size-4 text-emerald-400" />
             </div>
             <div>
-              <div className="text-sm font-medium">MineMe</div>
+              <div className="text-sm font-medium">MindMe</div>
               <div className="text-xs text-muted-foreground">Built for teams who live in WhatsApp</div>
             </div>
           </div>

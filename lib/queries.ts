@@ -183,15 +183,27 @@ export async function getNotifications(organisationId: string) {
 }
 
 // Update task status
-export async function updateTaskStatus(taskId: string, status: string) {
+export async function updateTaskStatus(
+  taskId: string,
+  status: string,
+  snoozeUntil?: string
+) {
   console.log("UPDATING TASK:", taskId)
   console.log("NEW STATUS:", status)
+  console.log("SNOOZE UNTIL:", snoozeUntil)
 
   const result = await sanityClient
     .patch(taskId)
     .set({
       status,
-      completedAt: new Date().toISOString(),
+
+      ...(status === "completed" && {
+        completedAt: new Date().toISOString(),
+      }),
+
+      ...(status === "snoozed" && {
+        snoozeUntil,
+      }),
     })
     .commit()
 

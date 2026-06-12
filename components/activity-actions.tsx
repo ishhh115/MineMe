@@ -29,21 +29,53 @@ export default function ActivityActions({
   }
 
   const handleSnooze = async () => {
-    const res = await fetch("/api/tasks/update-status", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        taskId,
-        status: "snoozed",
-      }),
-    })
+  const choice = prompt(
+    "Snooze for:\n1 = 2 Hours\n2 = Tomorrow\n3 = Custom DateTime"
+  )
 
-    if (res.ok) {
-      router.refresh()
-    }
+  let snoozeUntil = ""
+
+  if (choice === "1") {
+    const d = new Date()
+    d.setHours(d.getHours() + 2)
+    snoozeUntil = d.toISOString()
   }
+
+  if (choice === "2") {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    d.setHours(9, 0, 0, 0)
+    snoozeUntil = d.toISOString()
+  }
+
+  if (choice === "3") {
+    const custom = prompt(
+      "Enter date/time (YYYY-MM-DD HH:mm)"
+    )
+
+    if (!custom) return
+
+    snoozeUntil = new Date(custom).toISOString()
+  }
+
+  if (!snoozeUntil) return
+
+  const res = await fetch("/api/tasks/update-status", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      taskId,
+      status: "snoozed",
+      snoozeUntil,
+    }),
+  })
+
+  if (res.ok) {
+    router.refresh()
+  }
+}
 
   return (
     <div className="flex items-center gap-2 sm:justify-end">

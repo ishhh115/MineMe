@@ -3,7 +3,7 @@ import { updateTaskStatus } from '@/lib/queries'
 
 export async function POST(req: Request) {
   try {
-    const { taskId, status } = await req.json()
+    const { taskId, status, snoozeUntil } = await req.json()
 
     console.log("API HIT")
     console.log("TASK:", taskId)
@@ -16,7 +16,11 @@ export async function POST(req: Request) {
       )
     }
 
-    const result = await updateTaskStatus(taskId, status)
+    const result = await updateTaskStatus(
+  taskId,
+  status,
+  snoozeUntil
+)
 
     return NextResponse.json({ ok: true, result })
   } catch (err) {

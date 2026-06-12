@@ -485,6 +485,8 @@ const noResponse = Math.max(delivered - responded, 0)
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-white">{item.taskText}</p>
                         <Badge variant="outline" className={urgencyConfig[item.urgency]}>{capitalize(item.urgency)}</Badge>
+                        {item.status === "snoozed" && (
+                        <Badge variant="outline"className="bg-amber-500/15 text-amber-200 border-amber-400/25">Snoozed</Badge>)}
                       </div>
                       <p className="mt-0.5 text-xs text-slate-300">{item.groupName} · {timeAgo(item.createdAt)}</p>
                       <p className="mt-1 truncate text-xs text-slate-400">{item.originalMessage}</p>

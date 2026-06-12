@@ -54,7 +54,7 @@ export async function getRecentActivity(organisationId: string) {
     `*[
   _type == "task" &&
   organisation._ref == $orgId &&
-  status == "pending"
+  status != "completed"
 ] | order(createdAt desc)[0...10] {
       _id,
       taskText,

@@ -60,6 +60,7 @@ export async function getRecentActivity(organisationId: string) {
       taskText,
       urgency,
       status,
+      deadline,
       whatsappStatus,
       originalMessage,
       assignedTo,
@@ -78,7 +79,7 @@ console.log(tasks)
 export async function getUpcomingDeadlines(organisationId: string) {
   const now = new Date().toISOString()
   const tasks = await sanityClient.fetch(
-    `*[_type == "task" && organisation._ref == $orgId && deadline > $now && status == "pending"] | order(deadline asc) [0...5] {
+    `*[_type == "task" && organisation._ref == $orgId && deadline > $now && status != "completed"] | order(deadline asc) [0...5] {
       _id,
       taskText,
       urgency,
@@ -87,8 +88,13 @@ export async function getUpcomingDeadlines(organisationId: string) {
     }`,
     { orgId: organisationId, now }
   )
+
+  console.log("UPCOMING DEADLINES:", tasks)
+
   return tasks
 }
+
+
 
 // Get group conversion stats
 export async function getGroupConversion(organisationId: string) {
@@ -108,7 +114,7 @@ export async function getGroupConversion(organisationId: string) {
 // Get all tasks
 export async function getTasks(organisationId: string) {
   const tasks = await sanityClient.fetch(
-    `*[_type == "task" && organisation._ref == $orgId] | order(createdAt desc) {
+    `*[_type == "task" && organisation._ref == $orgId] | order(createdAt desc)[0...20] {
       _id,
       taskText,
       assignedTo,

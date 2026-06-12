@@ -12,11 +12,39 @@ export async function getDashboardStats(organisationId: string) {
       "completedViaWhatsapp": count(*[_type == "task" && organisation._ref == $orgId && whatsappStatus == "completed_via_whatsapp"]),
       "awaitingResponse": count(*[_type == "task" && organisation._ref == $orgId && whatsappStatus == "awaiting_response"]),
       "deliveryFailures": count(*[_type == "notification" && organisation._ref == $orgId && status == "failed"]),
-      "totalGroups": count(*[_type == "group" && organisation._ref == $orgId && isMonitoring == true])
+"totalGroups": count(*[_type == "group" && organisation._ref == $orgId && isMonitoring == true]),
+
+"totalRemindersDelivered": count(
+  *[_type == "notification" &&
+    organisation._ref == $orgId &&
+    status == "delivered"]
+),
+
+"totalResponses": count(
+  *[_type == "task" &&
+    organisation._ref == $orgId &&
+    whatsappStatus == "completed_via_whatsapp"]
+)
     }`,
     { orgId: organisationId }
   )
-  return stats
+  const responseRate =
+  stats.totalRemindersDelivered > 0
+    ? Math.round(
+        (stats.totalResponses / stats.totalRemindersDelivered) * 100
+      )
+    : 0
+
+console.log("DASHBOARD STATS:", {
+  delivered: stats.totalRemindersDelivered,
+  responses: stats.totalResponses,
+  responseRate,
+})
+
+return {
+  ...stats,
+  responseRate,
+}
   console.log("FETCHING STATS FOR:", organisationId)
 }
 

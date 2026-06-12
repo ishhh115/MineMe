@@ -156,6 +156,12 @@ const throughput = Array.from({ length: 7 }, (_, i) => {
     })
     .join(" ")
 
+    const delivered = stats.totalRemindersDelivered ?? 0
+
+const responded = stats.completedViaWhatsapp ?? 0
+
+const noResponse = Math.max(delivered - responded, 0)
+
   return (
     <div className="dashboard-shell relative w-full overflow-hidden">
       <div className="dashboard-noise" />
@@ -335,13 +341,63 @@ const throughput = Array.from({ length: 7 }, (_, i) => {
               <CardTitle className="text-base font-semibold text-white">Reminder Delivery & Response</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="mx-auto h-36 w-36 rounded-full bg-[conic-gradient(rgba(34,197,94,0.78)_0_79%,rgba(148,163,184,0.2)_79%_100%)] p-3">
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-black/55 text-3xl font-black text-emerald-200">{stats.responseRate ?? 0}%</div>
+              <div
+  className="mx-auto h-36 w-36 rounded-full p-3"
+  style={{
+    background: `conic-gradient(
+      ${
+        stats.responseRate >= 80
+          ? "rgba(34,197,94,0.78)"
+          : stats.responseRate >= 50
+          ? "rgba(250,204,21,0.78)"
+          : "rgba(239,68,68,0.78)"
+      } 0 ${stats.responseRate}%,
+      rgba(148,163,184,0.2) ${stats.responseRate}% 100%
+    )`,
+  }}
+>
+                <div
+  className={`flex h-full w-full items-center justify-center rounded-full bg-black/55 text-3xl font-black ${
+    stats.responseRate >= 80
+      ? "text-emerald-200"
+      : stats.responseRate >= 50
+      ? "text-yellow-200"
+      : "text-red-200"
+  }`}
+>{stats.responseRate ?? 0}%</div>
               </div>
-              <div className="rounded-xl border border-slate-200/10 bg-slate-950/35 p-3 text-xs text-slate-300">
-                <p className="font-medium text-slate-100">Operational baseline</p>
-                <p className="mt-1">{stats.totalRemindersDelivered ?? 0} reminders delivered on-time in the last 30 days.</p>
-              </div>
+              <div className="grid grid-cols-2 gap-4 text-center">
+  <div>
+    <div className="mb-1 flex items-center justify-center gap-2">
+      <div className="h-2 w-2 rounded-full bg-emerald-400" />
+      <span className="text-xs text-slate-300">
+        Responded
+      </span>
+    </div>
+
+    <p className="text-2xl font-bold text-emerald-200">
+      {responded}
+    </p>
+  </div>
+
+  <div>
+    <div className="mb-1 flex items-center justify-center gap-2">
+      <div className="h-2 w-2 rounded-full bg-slate-500" />
+      <span className="text-xs text-slate-300">
+        No Response
+      </span>
+    </div>
+
+    <p className="text-2xl font-bold text-slate-200">
+      {noResponse}
+    </p>
+  </div>
+</div>
+<div className="border-t border-slate-700 pt-4 text-center">
+  <p className="text-sm text-slate-400">
+    {delivered} reminders sent
+  </p>
+</div>
             </CardContent>
           </Card>
         </section>

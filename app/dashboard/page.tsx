@@ -1,3 +1,5 @@
+
+import ActivityActions from "@/components/activity-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,15 +20,6 @@ import {
   UsersIcon,
 } from "lucide-react"
 
-const throughput = [
-  { day: "Mon", completed: 14, created: 18 },
-  { day: "Tue", completed: 16, created: 17 },
-  { day: "Wed", completed: 11, created: 15 },
-  { day: "Thu", completed: 19, created: 21 },
-  { day: "Fri", completed: 17, created: 20 },
-  { day: "Sat", completed: 9, created: 12 },
-  { day: "Sun", completed: 13, created: 14 },
-]
 
 const urgencyConfig: Record<string, string> = {
   high: "bg-rose-500/15 text-rose-200 border-rose-400/25",
@@ -69,8 +62,52 @@ function formatDeadline(dateStr: string) {
 }
 
 export default async function DashboardPage() {
-  const { stats, recentActivity, upcomingDeadlines, groupConversion } = await getDashboardData()
+  console.log("🔥 DASHBOARD PAGE LOADED")
+  const {
+  stats,
+  recentActivity,
+  upcomingDeadlines,
+  groupConversion,
+  throughput: rawThroughput,
+} = await getDashboardData()
 
+
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+const throughput = Array.from({ length: 7 }, (_, i) => {
+  const date = new Date()
+  date.setDate(date.getDate() - (6 - i))
+
+  const created = rawThroughput.filter((task: any) => {
+    if (!task.createdAt) return false
+
+    const taskDate = new Date(task.createdAt)
+
+    return (
+      taskDate.getFullYear() === date.getFullYear() &&
+      taskDate.getMonth() === date.getMonth() &&
+      taskDate.getDate() === date.getDate()
+    )
+  }).length
+
+  const completed = rawThroughput.filter((task: any) => {
+    if (!task.completedAt) return false
+
+    const taskDate = new Date(task.completedAt)
+
+    return (
+      taskDate.getFullYear() === date.getFullYear() &&
+      taskDate.getMonth() === date.getMonth() &&
+      taskDate.getDate() === date.getDate()
+    )
+  }).length
+
+  return {
+    day: dayNames[date.getDay()],
+    created,
+    completed,
+  }
+})
   const statCards = [
     {
       title: "Response Rate",
@@ -397,14 +434,7 @@ export default async function DashboardPage() {
                       <p className="mt-1 truncate text-xs text-slate-400">{item.originalMessage}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 sm:justify-end">
-                    <Button size="sm" className="h-7 rounded-full bg-emerald-500 px-3 text-xs text-black hover:bg-emerald-400 transition-colors">
-                      Confirm Completed
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 rounded-full border-white/20 bg-white/5 px-3 text-xs text-zinc-100 hover:bg-white/10 transition-colors">
-                      Snooze
-                    </Button>
-                  </div>
+                  <ActivityActions taskId={item._id} />
                 </article>
               ))
             )}

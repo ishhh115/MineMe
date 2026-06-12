@@ -6,7 +6,7 @@ import { sendEmail, taskReminderTemplate } from "./email"
 export async function getDashboardStats(organisationId: string) {
   const stats = await sanityClient.fetch(
     `{
-      "totalTasks": count(*[_type == "task" && organisation._ref == $orgId]),
+      "totalTasks": count(*[_type == "task" && organisation._ref == $orgId && status == "pending"]),
       "pendingTasks": count(*[_type == "task" && organisation._ref == $orgId && status == "pending"]),
       "urgentTasks": count(*[_type == "task" && organisation._ref == $orgId && urgency == "high" && status == "pending"]),
       "completedViaWhatsapp": count(*[_type == "task" && organisation._ref == $orgId && whatsappStatus == "completed_via_whatsapp"]),
@@ -23,7 +23,11 @@ export async function getDashboardStats(organisationId: string) {
 // Get recent activity
 export async function getRecentActivity(organisationId: string) {
   const tasks = await sanityClient.fetch(
-    `*[_type == "task" && organisation._ref == $orgId] | order(createdAt desc) [0...10] {
+    `*[
+  _type == "task" &&
+  organisation._ref == $orgId &&
+  status == "pending"
+] | order(createdAt desc)[0...10] {
       _id,
       taskText,
       urgency,
@@ -37,6 +41,8 @@ export async function getRecentActivity(organisationId: string) {
     }`,
     { orgId: organisationId }
   )
+  console.log("RECENT ACTIVITY TASKS:")
+console.log(tasks)
   return tasks
 }
 
@@ -144,10 +150,20 @@ export async function getNotifications(organisationId: string) {
 
 // Update task status
 export async function updateTaskStatus(taskId: string, status: string) {
-  return await sanityClient
+  console.log("UPDATING TASK:", taskId)
+  console.log("NEW STATUS:", status)
+
+  const result = await sanityClient
     .patch(taskId)
-    .set({ status, completedAt: new Date().toISOString() })
+    .set({
+      status,
+      completedAt: new Date().toISOString(),
+    })
     .commit()
+
+  console.log("PATCH RESULT:", result)
+
+  return result
 }
 
 // Snooze task
@@ -313,4 +329,17 @@ export async function getUsers(organisationId: string, q?: string) {
     { orgId: organisationId }
   )
   return users
+}
+
+export async function getTaskThroughput(organisationId: string) {
+  const tasks = await sanityClient.fetch(
+    `*[_type == "task" && organisation._ref == $orgId]{
+      createdAt,
+      completedAt,
+      status
+    }`,
+    { orgId: organisationId }
+  )
+
+  return tasks
 }

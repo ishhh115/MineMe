@@ -109,6 +109,7 @@ if (
 
       // Step 3: Store raw message to Sanity
       await storeRawMessage({ chatId, sender, text, timestamp, messageId })
+      
 
       // Step 4: Clean the message
       const cleanedText = cleanMessage(text)
@@ -300,9 +301,19 @@ async function storeRawMessage({
   try {
     // Find group by chatId
     const group = await sanityClient.fetch(
-      `*[_type == "group" && chatId == $chatId][0]{ _id, "organisationId": organisation._ref }`,
-      { chatId }
-    )
+  `*[_type == "group" && chatId == $chatId][0]{
+    _id,
+    name,
+    chatId,
+    "organisationId": organisation._ref
+  }`,
+  { chatId }
+)
+
+console.log(
+  "GROUP FULL:",
+  JSON.stringify(group, null, 2)
+)
     console.log("Group found:", group)
 
     const orgId = group?.organisationId
@@ -369,9 +380,25 @@ async function processMessage({
 }){
   try {
     const group = await sanityClient.fetch(
-      `*[_type == "group" && chatId == $chatId][0]{ "organisationId": organisation._ref }`,
-      { chatId }
-    )
+  `*[_type == "group" && chatId == $chatId][0]{
+    _id,
+    name,
+    chatId,
+    "organisationId": organisation._ref
+  }`,
+  { chatId }
+)
+
+const sessionOrg = "qXFhG50RFmvqNFptDDVdX9"
+
+if (group?.organisationId !== sessionOrg) {
+  console.log("WRONG ORG FOUND")
+}
+
+console.log(
+  "GROUP FULL:",
+  JSON.stringify(group, null, 2)
+)
 
     console.log("Group found:", group)
 
@@ -412,7 +439,7 @@ async function processMessage({
        body: JSON.stringify({
   text: cleanedText,
   chatId,
-  groupName: message.chat_name,
+  groupName,
   sender,
   messageId,
   timestamp,

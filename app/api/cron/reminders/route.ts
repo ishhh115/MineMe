@@ -17,7 +17,6 @@ export async function GET(request: Request) {
     }
 
     const now = new Date()
-    //const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
     const twoHoursLater = new Date(
   now.getTime() + 24 * 60 * 60 * 1000
 )
@@ -26,7 +25,6 @@ export async function GET(request: Request) {
 console.log("TWO HOURS LATER:", twoHoursLater.toISOString())
 
 
-    // Get all organisations
     const organisations = await sanityClient.fetch(
       `*[_type == "organisation"] { _id, notificationPreferences, whapiToken }`
     )

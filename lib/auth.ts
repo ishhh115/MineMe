@@ -43,6 +43,15 @@ export const authOptions: NextAuthOptions = {
 
           if (!isValid) return null
 
+          console.log("LOGIN USER:", {
+  id: user._id,
+  name: user.name,
+  phone: user.phone,
+  email: user.email,
+  organisationId: user.organisation?._ref,
+  role: user.role,
+})
+
           return {
             id: user._id,
             name: user.name,

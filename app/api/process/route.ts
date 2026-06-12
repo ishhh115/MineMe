@@ -845,7 +845,10 @@ if (reassignMatch) {
       return NextResponse.json({ message: "No text provided" }, { status: 400 })
     }
 
-    const organisationId = orgId || process.env.NEXT_PUBLIC_ORG_ID
+    const organisationId =
+  orgId || process.env.NEXT_PUBLIC_ORG_ID
+
+console.log("PROCESS ORG:", organisationId)
 
     if (!organisationId) {
       return NextResponse.json({ message: "No organisation ID" }, { status: 400 })
@@ -917,16 +920,6 @@ if (explicitMatch) {
     .replace(new RegExp(`^${assignee}\\s+`, "i"), "")
     .trim()
 
-  /*analysis = {
-    isTask: true,
-    action: "new_task",
-    targetTask: null,
-    taskText,
-    assignedTo: assignee,
-    deadline: null,
-    urgency: "low",
-    confidence: 1,
-  }*/
 
     let deadline = null
 

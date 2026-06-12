@@ -16,9 +16,11 @@ export default async function Layout({
     redirect("/login")
   }
 
-  if (session.user.role !== "admin") {
+ /* if (session.user.role !== "admin") {
     redirect("/")
-  }
+  }*/
+
+  
 
   return (
     <SidebarProvider>

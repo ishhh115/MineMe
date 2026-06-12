@@ -84,7 +84,12 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
       .filter((t) => {
         const matchesSearch = !q || t.taskText.toLowerCase().includes(q) || (t.assignedTo || "").toLowerCase().includes(q) || (t.groupName || "").toLowerCase().includes(q)
         const matchesPriority = priorityFilter === "all" || t.urgency === priorityFilter
-        const matchesStatus = statusFilter === "all" || t.status === statusFilter
+        const matchesStatus =
+  statusFilter === "all" ||
+  (statusFilter === "pending" &&
+    (t.status === "pending" ||
+     t.status === "snoozed")) ||
+  t.status === statusFilter
         return matchesSearch && matchesPriority && matchesStatus
       })
       .sort((a, b) => {
@@ -98,7 +103,11 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
     total: localTasks.length,
     pending: localTasks.filter((t) => t.status === "pending").length,
     completed: localTasks.filter((t) => t.status === "completed").length,
-    urgent: localTasks.filter((t) => t.urgency === "high" && t.status === "pending").length,
+    uurgent: localTasks.filter(
+  (t) =>
+    t.urgency === "high" &&
+    t.status !== "completed"
+).length,
   }), [localTasks])
 
   async function confirmCompleted(taskId: string) {
@@ -259,7 +268,7 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
 
           <span className="mx-1 hidden h-4 w-px bg-slate-300/10 sm:block" />
           <span className="text-xs text-slate-400">Status</span>
-          {(["all","pending","completed"] as const).map((s)=> (
+          {(["all","pending","completed","snoozed"] as const).map((s)=> (
             <button key={s} onClick={()=>setStatusFilter(s)} className={cn('rounded-full border px-3 py-1.5 text-xs font-medium', statusFilter===s? 'bg-slate-800 text-white':'bg-slate-900/30 text-slate-300')}>{s==='all'? 'All' : capitalize(s)}</button>
           ))}
         </div>

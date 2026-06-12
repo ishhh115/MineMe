@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
 import { sanityClient } from "@/lib/sanity"
 
-// This route creates the initial organisation document in Sanity
-// Run this ONCE to set up your organisation
 export async function POST(request: Request) {
   try {
     const { name, botPhoneNumber } = await request.json()

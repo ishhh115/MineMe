@@ -3,7 +3,6 @@ import ActivityActions from "@/components/activity-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import LiveIndicator from "@/components/live-indicator"
 import EmptyState from "@/components/empty-state"
@@ -13,9 +12,7 @@ import {
   BellRingIcon,
   CheckSquareIcon,
   Clock3Icon,
-  FilterIcon,
   MessageCircleIcon,
-  SearchIcon,
   TrendingUpIcon,
   UsersIcon,
 } from "lucide-react"
@@ -193,20 +190,6 @@ const noResponse = Math.max(delivered - responded, 0)
                 <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Operational Overview</h1>
                 <p className="mt-2 max-w-xl text-sm text-slate-200/90">Track tasks, deadlines, reminders, and conversion from chat to execution.</p>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative min-w-0 sm:w-64">
-                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-300/80" />
-                <Input
-                  className="h-11 border-slate-300/15 bg-slate-900/35 pl-9 text-sm text-white placeholder:text-slate-400"
-                  placeholder="Search tasks, groups, deadlines"
-                />
-              </div>
-              <Button variant="outline" className="h-10 border-slate-300/20 bg-slate-900/30 text-slate-100 hover:bg-slate-800/55">
-                <FilterIcon className="size-4" />
-                Filters
-              </Button>
             </div>
           </div>
 

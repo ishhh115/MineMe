@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
-// Initialize client without keys. 
-// It automatically inherits credentials from the AWS Instance Profile / ECS Task Role.
 const sesClient = new SESClient({
   region: process.env.AWS_REGION || "us-east-1",
 });

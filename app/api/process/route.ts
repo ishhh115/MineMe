@@ -883,7 +883,7 @@ const isEditedMessage =
       }, { status: 429 })
     }
 
-    // Step 1: Analyze with GPT-4o-mini
+    // Analyze with GPT-4o-mini
    const previousTasks = await sanityClient.fetch(
   `*[_type == "task"
     && group->chatId == $chatId]
@@ -910,7 +910,6 @@ Status: ${task.status || "pending"}
 
 const explicitMatch = text.trim().match(explicitAssignmentRegex)
 
-
 let analysis
 
 if (explicitMatch) {
@@ -920,52 +919,25 @@ if (explicitMatch) {
     .replace(new RegExp(`^${assignee}\\s+`, "i"), "")
     .trim()
 
+  const gptDeadlineAnalysis =
+    await analyzeMessage(
+      text,
+      conversationContext
+    )
 
-    let deadline = null
-
-const deadlineMatch =
-  text.match(/\bby\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
-
-if (deadlineMatch) {
-  const date = new Date()
-
-  let hour = parseInt(deadlineMatch[1])
-
-  if (
-    deadlineMatch[3].toLowerCase() === "pm" &&
-    hour !== 12
-  ) {
-    hour += 12
+  analysis = {
+    isTask: true,
+    action: "new_task",
+    targetTask: null,
+    taskText,
+    assignedTo: assignee,
+    deadline: gptDeadlineAnalysis?.deadline || null,
+    confidence: 1,
   }
-
-  if (
-    deadlineMatch[3].toLowerCase() === "am" &&
-    hour === 12
-  ) {
-    hour = 0
-  }
-
-  date.setHours(hour)
-  date.setMinutes(deadlineMatch[2] ? parseInt(deadlineMatch[2]) : 0)
-  date.setSeconds(0)
-  date.setMilliseconds(0)
-
-  deadline = date.toISOString()
-}
-
-analysis = {
-  isTask: true,
-  action: "new_task",
-  targetTask: null,
-  taskText,
-  assignedTo: assignee,
-  deadline,
-  urgency: deadline ? "high" : "low",
-  confidence: 1,
-}
 
   console.log("RULE BASED TASK:", analysis)
-} else {
+}
+else {
   analysis = await analyzeMessage(
     text,
     conversationContext
@@ -1126,7 +1098,7 @@ if (analysis.action === "reassign_task") {
       return NextResponse.json({ isTask: false, message: "Not a task" })
     }
 
-    // Step 3: Find or create group
+    //Find or create group
     const groupId = await findOrCreateGroup(
   chatId || "unknown",
   organisationId,
@@ -1141,7 +1113,7 @@ if (groupName) {
     .commit()
 }
 
-    // Step 4: Parse deadline if present
+    //Parse deadline if present
     let deadlineISO = null
     if (analysis.deadline) {
       try {
@@ -1214,7 +1186,7 @@ const existingTasks = await sanityClient.fetch(
   }
 )
 
-    // Step 5: Save task to Sanity
+    // Save task to Sanity
  const normalizedNewTask =
   analysis.taskText
     ?.toLowerCase()
@@ -1248,33 +1220,48 @@ if (duplicateTask) {
   })
 }
 
+let calculatedUrgency =
+  analysis.urgency || "low"
+
+  console.log("GPT URGENCY:", analysis.urgency)
+console.log("FINAL URGENCY:", calculatedUrgency)
+
 let reminderAt = null
 
 if (deadlineISO) {
   const deadlineDate = new Date(deadlineISO)
 
-  const now = new Date()
-
-  const isSameDay =
-    deadlineDate.getDate() === now.getDate() &&
-    deadlineDate.getMonth() === now.getMonth() &&
-    deadlineDate.getFullYear() === now.getFullYear()
-
-  if (isSameDay) {
+  if (calculatedUrgency === "high") {
     reminderAt = new Date(
       deadlineDate.getTime() - 2 * 60 * 60 * 1000
     ).toISOString()
-  } else {
-    const reminderDate = new Date(deadlineDate)
+  }
 
-    reminderDate.setDate(reminderDate.getDate() - 1)
-    reminderDate.setHours(20, 0, 0, 0)
+  else if (calculatedUrgency === "medium") {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 6 * 60 * 60 * 1000
+    ).toISOString()
+  }
 
-    reminderAt = reminderDate.toISOString()
+  else {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 10 * 60 * 60 * 1000
+    ).toISOString()
   }
 }
+else {
+  reminderAt = new Date(
+    Date.now() + 2 * 60 * 60 * 1000
+  ).toISOString()
+}
+
+console.log("GPT URGENCY:", analysis.urgency)
+console.log("FINAL URGENCY:", calculatedUrgency)
+console.log("DEADLINE:", deadlineISO)
+console.log("REMINDER AT:", reminderAt)
 
 console.log("DEADLINE:", deadlineISO)
+console.log("CALCULATED URGENCY:", calculatedUrgency)
 console.log("REMINDER AT:", reminderAt)
 
 console.log("PROCESS ORG:", organisationId)
@@ -1286,9 +1273,9 @@ const task = await sanityClient.create({
   assignedTo: resolvedAssignee,
   deadline: deadlineISO,
 
-  reminderAt, // <-- NEW FIELD
+  reminderAt, 
 
-  urgency: analysis.urgency || "low",
+  urgency: calculatedUrgency,
   status: "pending",
   source: "ai",
   whatsappStatus: "pending",
@@ -1307,7 +1294,7 @@ const task = await sanityClient.create({
   createdAt: new Date().toISOString(),
 })
 console.log("GROUP ID USED FOR COUNTER:", groupId)
-    // Step 6: Update group task count
+    //Update group task count
     await sanityClient
      .patch(groupId)
 .setIfMissing({ tasksExtracted: 0 })

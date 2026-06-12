@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const now = new Date()
     const twoHoursLater = new Date(
-  now.getTime() + 24 * 60 * 60 * 1000
+  now.getTime() + 2 * 60 * 60 * 1000
 )
 
     console.log("NOW:", now.toISOString())

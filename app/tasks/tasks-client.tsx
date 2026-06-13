@@ -215,6 +215,7 @@ async function confirmCompleted(taskId: string) {
       const res = await fetch('/api/tasks/edit-deadline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, newDeadline: iso }) })
       const j = await res.json()
       if (j.ok) {
+        toast.success("Deadline updated successfully")
         setLocalTasks((cur) => cur.map((t) => t._id === taskId ? { ...t, deadline: iso } : t))
         if (selectedTask?._id === taskId) setSelectedTask({ ...(selectedTask as TaskRecord), deadline: iso })
         setNewDeadlineLocal("")
@@ -230,6 +231,7 @@ async function confirmCompleted(taskId: string) {
       const res = await fetch('/api/tasks/reassign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, assignee: newAssigneeId }) })
       const j = await res.json()
       if (j.ok) {
+        toast.success(`Task reassigned to ${newAssignee}`)
         setLocalTasks((cur) => cur.map((t) => t._id === taskId ? { ...t, assignedTo: newAssignee } : t))
         if (selectedTask?._id === taskId) setSelectedTask({ ...(selectedTask as TaskRecord), assignedTo: newAssignee })
         setNewAssignee("")
@@ -249,6 +251,7 @@ async function confirmCompleted(taskId: string) {
       const res = await fetch('/api/tasks/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId }) })
       const j = await res.json()
       if (j.ok) {
+        toast.success("Task deleted")
         setLocalTasks((cur) => cur.filter((t) => t._id !== taskId))
         setSelectedTask(null)
       }
@@ -295,7 +298,7 @@ async function confirmCompleted(taskId: string) {
   })
 
   if (res.ok) {
-  console.log("BEFORE UPDATE", selectedTask)
+  toast.success("Task snoozed successfully")
 
   setLocalTasks((cur) =>
     cur.map((t) =>

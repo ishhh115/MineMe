@@ -32,14 +32,16 @@ export default function RootLayout({
       lang="en"
       className={`${manrope.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <Providers>
-  <RecaptchaProvider>
-    <TooltipProvider>{children}</TooltipProvider>
-  </RecaptchaProvider>
-</Providers>
-<Toaster richColors />
-      </body>
+     <body className="min-h-full flex flex-col">
+  <Providers>
+    <RecaptchaProvider>
+      <TooltipProvider>
+        {children}
+        <Toaster richColors position="top-right" />
+      </TooltipProvider>
+    </RecaptchaProvider>
+  </Providers>
+</body>
     </html>
   );
 }

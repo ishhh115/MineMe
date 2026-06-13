@@ -897,7 +897,7 @@ const isEditedMessage =
 )
 
 const conversationContext = previousTasks
-  .map((task, index) => `
+  .map((task: any, index: number) => `
 Task ID: ${index + 1}
 Task: ${task.taskText}
 Assigned To: ${task.assignedTo || "Unknown"}

@@ -4,12 +4,23 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { CheckCircle2Icon, CheckSquareIcon, MessageCircleIcon, SearchIcon, SparklesIcon, XIcon } from "lucide-react"
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group"
 
 type TaskRecord = {
   _id: string
@@ -41,6 +52,9 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false)
   const [highlightedIndex, setHighlightedIndex] = React.useState<number>(-1)
   const [debouncedUserQuery, setDebouncedUserQuery] = React.useState("")
+  const [snoozeOpen, setSnoozeOpen] = React.useState(false)
+const [snoozeType, setSnoozeType] = React.useState("2hours")
+const [customDate, setCustomDate] = React.useState("")
 
   // debounce user query
   React.useEffect(() => {
@@ -110,25 +124,45 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
 ).length,
   }), [localTasks])
 
-  async function confirmCompleted(taskId: string) {
-    setLoadingAction(true)
-    try {
-      const res = await fetch('/api/tasks/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, status: 'completed' }),
-      })
-      const j = await res.json()
-        if (j.ok) {
-          setLocalTasks((cur) => cur.map((t) => t._id === taskId ? { ...t, status: 'completed' } : t))
-          if (selectedTask?._id === taskId) setSelectedTask({ ...(selectedTask as TaskRecord), status: 'completed' })
-        }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoadingAction(false)
+async function confirmCompleted(taskId: string) {
+  setLoadingAction(true)
+
+  try {
+    const res = await fetch("/api/tasks/update-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        taskId,
+        status: "completed",
+      }),
+    })
+
+    const j = await res.json()
+
+    if (j.ok) {
+      setLocalTasks((cur) =>
+        cur.map((t) =>
+          t._id === taskId
+            ? { ...t, status: "completed" }
+            : t
+        )
+      )
+
+      if (selectedTask?._id === taskId) {
+        setSelectedTask({
+          ...selectedTask,
+          status: "completed",
+        })
+      }
     }
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setLoadingAction(false)
   }
+}
 
   async function snoozeOneDay(taskId: string) {
     setLoadingAction(true)
@@ -214,6 +248,71 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
     } catch (err) { console.error(err) }
     finally { setLoadingAction(false) }
   }
+
+  async function handleSnoozeTask() {
+  if (!selectedTask) return
+
+  if (snoozeType === "custom" && !customDate) {
+    alert("Please select a date")
+    return
+  }
+
+  let snoozeUntil = ""
+
+  if (snoozeType === "2hours") {
+    snoozeUntil = new Date(
+      Date.now() + 2 * 60 * 60 * 1000
+    ).toISOString()
+  }
+
+  if (snoozeType === "24hours") {
+    snoozeUntil = new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ).toISOString()
+  }
+
+  if (snoozeType === "custom") {
+    snoozeUntil = new Date(customDate).toISOString()
+  }
+
+  const res = await fetch("/api/tasks/update-status", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      taskId: selectedTask._id,
+      status: "snoozed",
+      snoozeUntil,
+    }),
+  })
+
+  if (res.ok) {
+  console.log("BEFORE UPDATE", selectedTask)
+
+  setLocalTasks((cur) =>
+    cur.map((t) =>
+      t._id === selectedTask._id
+        ? { ...t, status: "snoozed" }
+        : t
+    )
+  )
+
+  setSelectedTask((prev) => {
+    console.log("UPDATING SELECTED TASK", prev)
+
+    return prev
+      ? {
+          ...prev,
+          status: "snoozed",
+        }
+      : null
+  })
+
+  setSnoozeOpen(false)
+}
+
+}
 
   function formatDeadline(dateStr?: string | null) {
     if (!dateStr) return 'No deadline'
@@ -320,42 +419,161 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
           </Table>
         </CardContent>
       </Card>
+      <Dialog
+  open={Boolean(selectedTask)}
+  onOpenChange={(open) => !open && setSelectedTask(null)}
+>
+  <DialogContent
+    className="!max-w-[1800px] max-h-[95vh] overflow-y-auto border-slate-300/15 bg-slate-950 text-white"
+  >
+    {selectedTask && (
+      <>
 
-      <Dialog open={Boolean(selectedTask)} onOpenChange={(open)=>!open && setSelectedTask(null)}>
-        <DialogContent className="max-w-2xl border-slate-300/15 bg-slate-950 text-white">
-          {selectedTask && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedTask.taskText}</DialogTitle>
-              </DialogHeader>
+      <DialogHeader>
+  <DialogTitle className="text-2xl font-bold">
+    {selectedTask.taskText}
+  </DialogTitle>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border p-3">
-                  <p className="text-[11px] text-slate-400">Assignee</p>
-                  <p className="text-sm text-white">{selectedTask.assignedTo || 'Unassigned'}</p>
-                </div>
-                <div className="rounded-xl border p-3">
-                  <p className="text-[11px] text-slate-400">WhatsApp Status</p>
-                  <p className="text-sm text-white">{capitalize(selectedTask.whatsappStatus||'pending')}</p>
-                </div>
-                <div className="rounded-xl border p-3">
-                  <p className="text-[11px] text-slate-400">Deadline</p>
-                  <p className="text-sm text-white">{formatDeadline(selectedTask.deadline)}</p>
-                </div>
-                <div className="rounded-xl border p-3">
-                  <p className="text-[11px] text-slate-400">Priority</p>
-                  <p className="text-sm text-white">{capitalize(selectedTask.urgency||'low')}</p>
-                </div>
-              </div>
+  <DialogDescription>
+    View task details, assignment, deadline and actions.  
+  </DialogDescription>
 
-              <div className="mt-4 rounded-xl border p-4">
+  <div className="mt-2 flex flex-wrap gap-2">
+    <Badge variant="outline">
+      {selectedTask.groupName || "Unknown Group"}
+    </Badge>
+
+<Badge
+  className={
+    selectedTask.status === "completed"
+      ? "bg-emerald-600"
+      : selectedTask.status === "snoozed"
+      ? "bg-amber-600"
+      : "bg-slate-700"
+  }
+>
+  {capitalize(selectedTask.status)}
+</Badge>
+
+<Badge
+  className={
+    selectedTask.urgency === "high"
+      ? "bg-red-600"
+      : selectedTask.urgency === "medium"
+      ? "bg-yellow-600"
+      : "bg-blue-600"
+  }
+>
+  {capitalize(selectedTask.urgency)}
+</Badge>
+  </div>
+</DialogHeader>
+<div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+              <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+  <div className="rounded-xl border p-4">
+    <p className="text-xs text-slate-400">Assigned To</p>
+    <p className="mt-1 font-medium">
+      {selectedTask.assignedTo || "Unassigned"}
+    </p>
+  </div>
+
+  <div className="rounded-xl border p-4">
+    <p className="text-xs text-slate-400">Group</p>
+    <p className="mt-1 font-medium">
+      {selectedTask.groupName || "Unknown"}
+    </p>
+  </div>
+
+  <div className="rounded-xl border p-4">
+    <p className="text-xs text-slate-400">Deadline</p>
+    <p className="mt-1 font-medium">
+      {formatDeadline(selectedTask.deadline)}
+    </p>
+  </div>
+
+  <div className="rounded-xl border p-4">
+    <p className="text-xs text-slate-400">WhatsApp Status</p>
+    <p className="mt-1 font-medium">
+      {capitalize(selectedTask.whatsappStatus)}
+    </p>
+  </div>
+
+  <div className="rounded-xl border p-4">
+  <p className="text-xs text-slate-400">
+    AI Confidence
+  </p>
+
+  <p className="mt-1 font-medium">
+    {selectedTask.confidence
+      ? `${Math.round(selectedTask.confidence * 100)}%`
+      : "N/A"}
+  </p>
+</div>
+</div>
+
+              <div className="mt-5 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
                 <p className="text-[11px] text-slate-400">Original WhatsApp Message</p>
                 <p className="mt-2 text-sm text-slate-100">{selectedTask.originalMessage || '—'}</p>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="mt-5 rounded-xl border p-4">
+  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+    Task History
+  </p>
+
+  <div className="space-y-4 text-sm">
+
+    <div>
+      <p>✅ Task Extracted</p>
+      <p className="text-xs text-slate-500">
+        {selectedTask.createdAt
+          ? new Date(selectedTask.createdAt).toLocaleString()
+          : "Unknown"}
+      </p>
+    </div>
+
+    <div>   
+      <p>👤 Assigned To</p>
+      <p className="text-xs text-slate-500">
+        {selectedTask.assignedTo || "Unassigned"}
+      </p>
+    </div>
+
+    <div>
+      <p>📅 Deadline</p>
+      <p className="text-xs text-slate-500">
+        {formatDeadline(selectedTask.deadline)}
+      </p>
+    </div>
+
+    <div>
+      <p>💬 Source Group</p>
+      <p className="text-xs text-slate-500">
+        {selectedTask.groupName || "Unknown Group"}
+      </p>
+    </div>
+
+    <div>
+      <p>📨 Current Status</p>
+      <p className="text-xs text-slate-500">
+        {capitalize(selectedTask.status)}
+      </p>
+    </div>
+
+  </div>
+</div>
+</div>
+
+              <div className="space-y-3 rounded-xl border border-slate-700 p-4">
                 <Button className="w-full bg-emerald-600" onClick={()=>confirmCompleted(selectedTask._id)} disabled={loadingAction}>Confirm Completed</Button>
-                <Button className="w-full" variant="outline" onClick={()=>snoozeOneDay(selectedTask._id)} disabled={loadingAction}>Snooze 1 day</Button>
+                <Button
+  className="w-full"
+  variant="outline"
+  onClick={() => setSnoozeOpen(true)}
+>
+  Snooze Task
+</Button>
                 <div className="grid gap-2">
                   <div className="flex gap-2">
                     <Button onClick={()=>resendReminder(selectedTask._id)} disabled={loadingAction} variant="outline" className="flex-1">Resend Reminder</Button>
@@ -442,13 +660,68 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
                   </div>
 
                   <Button className="w-full" variant="ghost" onClick={()=>setSelectedTask(null)}>Close</Button>
+                  </div>
                 </div>
               </div>
+              
 
             </>
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={snoozeOpen} onOpenChange={setSnoozeOpen}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Snooze Task</DialogTitle>
+
+      <DialogDescription>
+        Choose when this task should reappear.
+      </DialogDescription>
+    </DialogHeader>
+
+    <RadioGroup
+      value={snoozeType}
+      onValueChange={setSnoozeType}
+      className="space-y-3"
+    >
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="2hours" id="2hours" />
+        <label htmlFor="2hours">2 Hours</label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="24hours" id="24hours" />
+        <label htmlFor="24hours">Tomorrow</label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="custom" id="custom" />
+        <label htmlFor="custom">Custom Date</label>
+      </div>
+    </RadioGroup>
+
+    {snoozeType === "custom" && (
+      <Input
+        type="datetime-local"
+        value={customDate}
+        onChange={(e) => setCustomDate(e.target.value)}
+      />
+    )}
+
+    <div className="flex justify-end gap-2">
+      <Button
+        variant="outline"
+        onClick={() => setSnoozeOpen(false)}
+      >
+        Cancel
+      </Button>
+
+      <Button onClick={handleSnoozeTask}>
+        Snooze
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
     </div>
   )
 }

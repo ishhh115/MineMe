@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "./providers";
 import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import { RecaptchaProvider } from "@/components/recaptcha-provider"
+import { Toaster } from "sonner"
 
 const manrope = Manrope({
   variable: "--font-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
     <TooltipProvider>{children}</TooltipProvider>
   </RecaptchaProvider>
 </Providers>
+<Toaster richColors />
       </body>
     </html>
   );

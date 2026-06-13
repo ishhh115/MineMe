@@ -21,6 +21,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group"
+import { toast } from "sonner"
 
 type TaskRecord = {
   _id: string
@@ -193,10 +194,16 @@ async function confirmCompleted(taskId: string) {
       })
       const j = await res.json()
       if (j.ok) {
-        // optionally show toast
-        console.log('resend queued')
-      }
-    } catch (err) { console.error(err) }
+  toast.success(
+    `Reminder sent to ${selectedTask?.assignedTo || "assignee"}`
+  )
+} else {
+  toast.error("Failed to send reminder")
+}
+    } catch (err) {
+  console.error(err)
+  toast.error("Failed to send reminder")
+}
     finally { setLoadingAction(false) }
   }
 

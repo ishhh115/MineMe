@@ -103,7 +103,7 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
     total: localTasks.length,
     pending: localTasks.filter((t) => t.status === "pending").length,
     completed: localTasks.filter((t) => t.status === "completed").length,
-    uurgent: localTasks.filter(
+    urgent: localTasks.filter(
   (t) =>
     t.urgency === "high" &&
     t.status !== "completed"
@@ -227,7 +227,7 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
       <div className="flex flex-col gap-4 border-b border-border/40 pb-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
           <div className="flex items-start gap-3">
             <SidebarTrigger className="mt-0.5 md:hidden" />
             <div className="rounded-xl border border-slate-300/10 bg-slate-900/40 p-3">
@@ -238,13 +238,6 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
               <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white">Operational Tasks</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-300">Click any task row to inspect the original WhatsApp message, reminders, assignment, deadline, and operational status.</p>
             </div>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Badge variant="outline" className="justify-start border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-rose-200">{counts.urgent} Urgent</Badge>
-            <Badge variant="outline" className="justify-start border-slate-300/20 bg-slate-500/10 px-3 py-1.5 text-slate-100">{counts.total} Total Tasks</Badge>
-            <Badge variant="outline" className="justify-start border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-amber-100">{counts.pending} Awaiting Response</Badge>
-            <Badge variant="outline" className="justify-start border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-emerald-100">{counts.completed} Completed</Badge>
           </div>
         </div>
 

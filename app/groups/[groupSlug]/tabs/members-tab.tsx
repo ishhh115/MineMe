@@ -44,6 +44,8 @@ type GroupMember = {
   phone: string
   initials: string
   whatsappRole?: string
+  linkedUserId?: string
+  portalRole?: string
 }
 
 const PAGE_SIZE = 10
@@ -63,11 +65,13 @@ export function MembersTab({
   tasks,
   members,
   groupId,
+  currentUserRole,
 }: {
   users: User[]
   tasks: Task[]
   members: GroupMember[]
   groupId: string
+  currentUserRole: string
 }) {
   const [search, setSearch] = React.useState("")
   const [page, setPage] = React.useState(1)
@@ -84,6 +88,9 @@ const [selectedRole, setSelectedRole] =
   const [open, setOpen] =
   React.useState(false)
 
+      const isAdmin =
+  currentUserRole === "admin"
+
   const taskStats = React.useMemo(() => {
     const map: Record<string, { total: number; completed: number; pending: number }> = {}
     tasks.forEach((t) => {
@@ -94,6 +101,7 @@ const [selectedRole, setSelectedRole] =
       if (t.status === "completed") map[key].completed++
       if (t.status === "pending") map[key].pending++
     })
+
     return map
   }, [tasks])
 
@@ -285,8 +293,8 @@ const [selectedRole, setSelectedRole] =
 
   {/* ACTIONS */}
   <TableCell className="pr-5">
-    {member.userId ? (
-      <DropdownMenu>
+    {member.userId && isAdmin ? (
+  <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             size="sm"
@@ -319,17 +327,30 @@ const [selectedRole, setSelectedRole] =
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      ) : member.userId ? (
+  <Badge
+    variant="outline"
+    className="text-xs"
+  >
+    View Only
+  </Badge>
     ) : (
-      <Button
-  size="sm"
-  variant="outline"
-  onClick={() => {
-    setSelectedMember(member)
-    setOpen(true)
-  }}
->
-  Invite
-</Button>
+      isAdmin ? (
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={() => {
+      setSelectedMember(member)
+      setOpen(true)
+    }}
+  >
+    Invite
+  </Button>
+) : (
+  <span className="text-xs text-slate-500">
+    No Access
+  </span>
+)
     )}
   </TableCell>
 </TableRow>

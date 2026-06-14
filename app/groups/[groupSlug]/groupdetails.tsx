@@ -66,10 +66,13 @@ type Group = {
   totalTasks?: number
 
   members?: Array<{
-    name?: string
-    phone?: string
-    initials?: string
-  }>
+  name: string
+  phone: string
+  initials: string
+  whatsappRole?: string
+  linkedUserId?: string
+  portalRole?: string
+}>
 }
 
 type User = {
@@ -110,6 +113,7 @@ export function GroupDetailClient({
   messages,
   users,
   activeTab,
+  currentUserRole,
 }: {
   group: Group
   tasks: Task[]
@@ -117,6 +121,7 @@ export function GroupDetailClient({
   messages: Message[]
   users: User[]
   activeTab: TabId
+  currentUserRole : string
 }) {
   const router = useRouter()
   const total = group.totalTasks ?? 0
@@ -237,6 +242,7 @@ const healthClass =
         notifications={notifications}
         messages={messages}
         users={users}
+        currentUserRole={currentUserRole}
         total={total}
         pending={pending}
         completed={completed}
@@ -247,7 +253,7 @@ const healthClass =
 }
 
 function GroupTabContent({
-  activeTab, group, tasks, notifications, messages, users,
+  activeTab, group, tasks, notifications, messages, users,currentUserRole,
   total, pending, completed, completionRate,
 }: {
   activeTab: TabId
@@ -260,6 +266,7 @@ function GroupTabContent({
   pending: number
   completed: number
   completionRate: number
+  currentUserRole : string
 }) {
 
   const OverviewTab = React.lazy(() => import("./tabs/overview-tab").then(m => ({ default: m.OverviewTab })))
@@ -281,8 +288,9 @@ function GroupTabContent({
   tasks={tasks}
   members={group.members || []}
   groupId={group._id}
+  currentUserRole={currentUserRole}
 />
-)}
+)} 
       {activeTab === "settings" && <SettingsTab group={group} />}
     </React.Suspense>
   )

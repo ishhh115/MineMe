@@ -3,6 +3,14 @@ import { authOptions } from "@/lib/auth"
 import { sanityClient } from "@/lib/sanity"
 import { getUsers } from "@/lib/queries"
 
+type User = {
+  _id: string
+  name?: string
+  email?: string
+  phone?: string
+  role?: string
+}
+
 export async function getGroupDetailData(groupId: string) {
   try {
     const session = await getServerSession(authOptions)
@@ -53,9 +61,12 @@ export async function getGroupDetailData(groupId: string) {
     )
 
     const users = await getUsers(orgId)
+    const currentUser = users.find(
+  (u: User) => u.email === session?.user?.email
+)
     console.log("USERS FETCHED FOR GROUP DETAIL:", users)
 
-    return { group, tasks, notifications, messages, users }
+    return { group, tasks, notifications, messages, users ,currentUser}
   } catch (error) {
     console.error("Group detail data fetch error:", error)
     return { group: null, tasks: [], notifications: [], messages: [], users: [] }

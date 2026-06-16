@@ -137,21 +137,20 @@ export async function getTasks(organisationId: string) {
 // Get all groups
 export async function getGroups(organisationId: string) {
   const groups = await sanityClient.fetch(
-    `*[_type == "group" && organisation._ref == $orgId] | order(createdAt desc) {
+    `*[_type == "group" && organisation._ref == $orgId] | order(lastMessageAt desc) {
       _id,
       name,
       chatId,
-      participants,
       isMonitoring,
-      health,
       messagesCount,
       tasksExtracted,
-      completedTasksCount,
-      completionPercentage,
-      latestExtractedMessage,
-      overdueCount,
       lastMessageAt,
-      members
+      "pendingCount": count(*[_type == "task" && group._ref == ^._id && status == "pending"]),
+      "completedCount": count(*[_type == "task" && group._ref == ^._id && status == "completed"]),
+      "totalTasks": count(*[_type == "task" && group._ref == ^._id]),
+      participants,
+      members,
+      health,
     }`,
     { orgId: organisationId }
   )
@@ -388,4 +387,58 @@ export async function getTaskThroughput(organisationId: string) {
   )
 
   return tasks
+}
+
+export async function importWhatsappGroup(
+  group: {
+    id: string
+    name: string
+    participants_count?: number
+    participants?: Array<{
+      id: string
+      rank: string
+    }>
+  },
+  organisationId: string
+) {
+  const existing = await sanityClient.fetch(
+    `*[_type == "group" && chatId == $chatId][0]`,
+    {
+      chatId: group.id,
+    }
+  )
+
+  if (existing) {
+    return existing
+  }
+
+  return await sanityClient.create({
+    _type: "group",
+
+    organisation: {
+      _type: "reference",
+      _ref: organisationId,
+    },
+
+    chatId: group.id,
+    name: group.name,
+
+    participants: group.participants_count || 0,
+
+    members:
+      group.participants?.map((member) => ({
+        name: member.id,
+        phone: member.id,
+        initials: member.id.slice(-2),
+      })) || [],
+
+    isMonitoring: true,
+
+    messagesCount: 0,
+    tasksExtracted: 0,
+    completedTasksCount: 0,
+    completionPercentage: 0,
+
+    createdAt: new Date().toISOString(),
+  })
 }

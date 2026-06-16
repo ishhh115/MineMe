@@ -6,11 +6,7 @@ export async function getGroupsPageData() {
   try {
     const session = await getServerSession(authOptions)
     const orgId = (session?.user as { organisationId?: string } | undefined)?.organisationId
-
-    if (!orgId) {
-      throw new Error("No organisation ID found")
-    }
-
+    if (!orgId) throw new Error("No organisation ID found")
     const groups = await getGroups(orgId)
     return { groups }
   } catch (error) {

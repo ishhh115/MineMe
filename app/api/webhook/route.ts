@@ -412,7 +412,7 @@ console.log(
       const newGroup = await sanityClient.create({
         _type: "group",
         chatId,
-        name: chatId,
+        name: groupName || chatId,
         organisation: {
           _type: "reference",
           _ref: defaultOrgId,

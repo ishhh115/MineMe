@@ -4,80 +4,503 @@ import * as React from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { SearchIcon, UsersIcon, FilterIcon } from "lucide-react"
+import {
+  SearchIcon,
+  UsersIcon,
+  PlusIcon,
+  FilterIcon,
+  EyeIcon,
+  MoreHorizontalIcon,
+  CheckSquareIcon,
+  ClockIcon,
+  CheckCircle2Icon,
+} from "lucide-react"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 
-export default function GroupsClient({ groups }: { groups: any[] }) {
+type Group = {
+  _id: string
+  name?: string
+  chatId?: string
+  isMonitoring?: boolean
+  messagesCount?: number
+  tasksExtracted?: number
+  lastMessageAt?: string
+  pendingCount?: number
+  completedCount?: number
+  totalTasks?: number
+  participants?: number
+  [key: string]: unknown
+}
+
+function getHealthStyle(health?: string) {
+  switch ((health || "").toLowerCase()) {
+    case "healthy":
+    case "high activity":
+      return {
+        dot: "bg-emerald-400",
+        badge: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+        label: "Healthy",
+      }
+    case "attention":
+    case "deadline risk":
+    case "reminder heavy":
+      return {
+        dot: "bg-amber-400",
+        badge: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+        label: "Attention",
+      }
+    case "critical":
+      return {
+        dot: "bg-red-400",
+        badge: "border-red-400/30 bg-red-500/10 text-red-300",
+        label: "Critical",
+      }
+    case "quiet":
+    case "monitoring":
+      return {
+        dot: "bg-slate-400",
+        badge: "border-slate-400/30 bg-slate-500/10 text-slate-300",
+        label: "Quiet",
+      }
+    default:
+      return {
+        dot: "bg-slate-400",
+        badge: "border-slate-400/30 bg-slate-500/10 text-slate-300",
+        label: health || "—",
+      }
+  }
+}
+
+function deriveHealth(pending: number, total: number) {
+  if (total === 0) return "Quiet"
+  const ratio = pending / total
+  if (ratio > 0.5) return "Attention"
+  return "Healthy"
+}
+
+function CompletionBar({ value }: { value: number }) {
+  const color =
+    value >= 90
+      ? "bg-emerald-400"
+      : value >= 70
+      ? "bg-emerald-500"
+      : value >= 50
+      ? "bg-amber-400"
+      : "bg-red-400"
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-800">
+        <div className={cn("h-full rounded-full", color)} style={{ width: `${Math.min(value, 100)}%` }} />
+      </div>
+      <span className="text-xs text-slate-300">{value}%</span>
+    </div>
+  )
+}
+
+const HEALTH_FILTERS = ["All", "Healthy", "Attention", "Critical"] as const
+
+export default function GroupsClient({ groups }: { groups: Group[] }) {
   const [search, setSearch] = React.useState("")
-  const [healthFilter, setHealthFilter] = React.useState<any>("All")
-  const [sortMode, setSortMode] = React.useState("most-active")
+  const [healthFilter, setHealthFilter] = React.useState<string>("All")
+
+  const [showImportModal, setShowImportModal] = React.useState(false)
+  const [whatsappGroups, setWhatsappGroups] = React.useState<any[]>([])
+  const [loadingGroups, setLoadingGroups] = React.useState(false)
+  const [selectedGroups, setSelectedGroups] = React.useState<string[]>([])
+  
+
+  const stats = React.useMemo(() => {
+    const totalGroups = groups.length
+    const totalTasks = groups.reduce((s, g) => s + (g.totalTasks ?? g.tasksExtracted ?? 0), 0)
+    const pendingTasks = groups.reduce((s, g) => s + (g.pendingCount ?? 0), 0)
+    const completedTasks = groups.reduce((s, g) => s + (g.completedCount ?? 0), 0)
+    return { totalGroups, totalTasks, pendingTasks, completedTasks }
+  }, [groups])  
+
+
+async function loadWhatsappGroups() {
+  try {
+    setLoadingGroups(true)
+
+    const res = await fetch("/api/groups/whatsapp")
+    const data = await res.json()
+
+    console.log("WHATSAPP GROUPS:", data)
+
+    setWhatsappGroups(data.groups || [])
+    setShowImportModal(true)
+  } catch (error) {
+    console.error(error)
+  } finally {
+    setLoadingGroups(false)
+  }
+}
+
+async function importSelectedGroups() {
+  try {
+    const groupToImport = whatsappGroups.find((group) =>
+      selectedGroups.includes(group.id)
+    )
+
+    const res = await fetch("/api/groups/import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        group: groupToImport,
+      }),
+    })
+
+    const data = await res.json()
+
+    console.log("IMPORT RESULT:", data)
+
+    window.location.reload()
+  } catch (error) {
+    console.error(error)
+  }
+}
 
   const filteredGroups = React.useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return (groups || [])
-      .filter((group) => {
-        const matchesSearch = !query || (group.name || '').toLowerCase().includes(query) || (group.category || '').toLowerCase().includes(query)
-        const matchesHealth = healthFilter === "All" || (group.health || "") === healthFilter
-        return matchesSearch && matchesHealth
-      })
+    const q = search.trim().toLowerCase()
+    return (groups || []).filter((g) => {
+      const matchesSearch =
+        !q ||
+        (g.name || "").toLowerCase().includes(q)
+
+      if (healthFilter === "All") return matchesSearch
+
+      const total = g.totalTasks ?? g.tasksExtracted ?? 0
+      const pending = g.pendingCount ?? 0
+      const derived = deriveHealth(pending, total)
+      const hs = getHealthStyle(derived)
+      return matchesSearch && hs.label.toLowerCase() === healthFilter.toLowerCase()
+    })
   }, [groups, healthFilter, search])
 
-  const clearFilters = () => { setSearch(''); setHealthFilter('All'); setSortMode('most-active') }
+  console.log("STATE GROUPS:", whatsappGroups)
 
   return (
-    <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl border border-slate-300/10 bg-slate-900/40 p-3">
-          <UsersIcon className="size-5 text-emerald-300" />
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-6">
+        <div className="flex items-start gap-3">
+          <SidebarTrigger className="mt-0.5 md:hidden" />
+          <div className="rounded-xl border border-slate-300/10 bg-slate-900/40 p-3">
+            <UsersIcon className="size-5 text-emerald-300" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              WhatsApp Operations Monitoring
+            </p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white">Groups</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              Monitor WhatsApp groups and task activity in real-time
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">WhatsApp Operations Monitoring</p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white">Groups</h1>
-        </div>
+        <Button
+  onClick={loadWhatsappGroups}
+  className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+>
+  <PlusIcon className="mr-2 size-4" />
+  {loadingGroups ? "Loading..." : "Add Group"}
+</Button>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-xl">
+      {/* ── Stat Cards ── */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border border-slate-300/10 bg-slate-900/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-emerald-500/10 p-2">
+                <UsersIcon className="size-4 text-emerald-400" />
+              </div>
+              <p className="text-xs text-slate-400">Total Groups</p>
+            </div>
+            <p className="mt-3 text-3xl font-black text-white">{stats.totalGroups}</p>
+            <p className="mt-1 text-xs text-emerald-400">↑ 2 this week</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-300/10 bg-slate-900/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-500/10 p-2">
+                <CheckSquareIcon className="size-4 text-blue-400" />
+              </div>
+              <p className="text-xs text-slate-400">Total Tasks</p>
+            </div>
+            <p className="mt-3 text-3xl font-black text-white">{stats.totalTasks}</p>
+            <p className="mt-1 text-xs text-blue-400">↑ 18 this week</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-300/10 bg-slate-900/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-amber-500/10 p-2">
+                <ClockIcon className="size-4 text-amber-400" />
+              </div>
+              <p className="text-xs text-slate-400">Pending Tasks</p>
+            </div>
+            <p className="mt-3 text-3xl font-black text-white">{stats.pendingTasks}</p>
+            <p className="mt-1 text-xs text-amber-400">↓ 5 this month</p>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-300/10 bg-slate-900/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-emerald-500/10 p-2">
+                <CheckCircle2Icon className="size-4 text-emerald-400" />
+              </div>
+              <p className="text-xs text-slate-400">Completed Tasks</p>
+            </div>
+            <p className="mt-3 text-3xl font-black text-white">{stats.completedTasks}</p>
+            <p className="mt-1 text-xs text-emerald-400">↑ 22 this month</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Search + Filters ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search groups..." className="h-11 pl-9" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search groups..."
+            className="h-10 border-slate-300/15 bg-slate-900/35 pl-9 text-sm text-white placeholder:text-slate-400"
+          />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={clearFilters}>Reset</Button>
+        <div className="flex items-center gap-2">
+          {HEALTH_FILTERS.map((f) => (
+            <button
+              key={f}
+              onClick={() => setHealthFilter(f)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                healthFilter === f
+                  ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                  : "border-slate-700 bg-slate-900/30 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              {f === "All" ? "All" : `#${f}`}
+            </button>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 border-slate-700 text-slate-400"
+            onClick={() => { setSearch(""); setHealthFilter("All") }}
+          >
+            <FilterIcon className="mr-1.5 size-3.5" />
+            Filter
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-2">
-        {filteredGroups.map((group: any) => (
-          <Link key={group._id} href={`/groups/${group._id}`} className="block h-full">
-            <Card className="glass-card-calm relative flex h-full flex-col overflow-hidden border border-slate-300/10">
-              <CardContent className="relative flex h-full flex-col gap-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="rounded-xl border border-slate-300/10 bg-slate-900/40 p-3">
-                      <UsersIcon className="size-5 text-emerald-300" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-white">{group.name}</h3>
-                        <Badge variant="outline">{group.health}</Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-400">{group.participants} participants • {group.lastSync || '—'}</p>
-                    </div>
-                  </div>
-                </div>
+      {/* ── Table ── */}
+      <Card className="border border-slate-300/10 bg-slate-950/35">
+        <CardHeader className="border-b border-slate-300/10 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-white">
+              {filteredGroups.length} group{filteredGroups.length !== 1 ? "s" : ""}
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-slate-300/10 hover:bg-transparent">
+                <TableHead className="pl-6 text-[11px] uppercase tracking-[0.18em] text-slate-400">Group Name</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Members</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Total Tasks</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Pending</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Completed</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Completion Rate</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Status</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Last Activity</TableHead>
+                <TableHead className="pr-6 text-[11px] uppercase tracking-[0.18em] text-slate-400">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredGroups.length > 0 ? (
+                filteredGroups.map((group) => {
+                  const total = group.totalTasks ?? group.tasksExtracted ?? 0
+                  const pending = group.pendingCount ?? 0
+                  const completed = group.completedCount ?? 0
+                  const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+                  const hs = getHealthStyle(deriveHealth(pending, total))
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-xl border p-3"><p className="text-[11px] text-slate-400">Messages</p><p className="mt-1 text-2xl font-black text-white">{group.messagesCount ?? group.messagesToday ?? 0}</p></div>
-                  <div className="rounded-xl border p-3"><p className="text-[11px] text-slate-400">Tasks</p><p className="mt-1 text-2xl font-black text-white">{group.tasksExtracted ?? group.tasksToday ?? 0}</p></div>
-                  <div className="rounded-xl border p-3"><p className="text-[11px] text-slate-400">Pending</p><p className="mt-1 text-2xl font-black text-amber-100">{group.overdueCount ?? group.pendingTasks ?? 0}</p></div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                  return (
+                    <TableRow
+                      key={group._id}
+                      className="cursor-pointer border-slate-300/10 hover:bg-slate-900/40"
+                    >
+                      {/* Group Name */}
+                      <TableCell className="pl-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-8 items-center justify-center rounded-lg bg-slate-800 text-xs font-semibold text-slate-200">
+                            {(group.name || "G").slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-semibold text-white">{group.name || "—"}</span>
+                        </div>
+                      </TableCell>
+
+                      {/* Members */}
+                      <TableCell className="py-4">
+                        <span className="text-sm text-slate-200">
+                          {group.participants ?? "—"}
+                        </span>
+                      </TableCell>
+
+                      {/* Total Tasks */}
+                      <TableCell className="py-4">
+                        <span className="text-sm font-semibold text-white">{total}</span>
+                      </TableCell>
+
+                      {/* Pending */}
+                      <TableCell className="py-4">
+                        <span className={cn("text-sm font-semibold", pending > 0 ? "text-amber-300" : "text-slate-300")}>
+                          {pending}
+                        </span>
+                      </TableCell>
+
+                      {/* Completed */}
+                      <TableCell className="py-4">
+                        <span className="text-sm font-semibold text-emerald-300">{completed}</span>
+                      </TableCell>
+
+                      {/* Completion Rate */}
+                      <TableCell className="py-4">
+                        <CompletionBar value={rate} />
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("size-2 rounded-full shrink-0", hs.dot)} />
+                          <Badge variant="outline" className={cn("text-[11px]", hs.badge)}>
+                            {hs.label}
+                          </Badge>
+                        </div>
+                      </TableCell>
+
+                      {/* Last Activity */}
+                      <TableCell className="py-4">
+                        <span className="text-sm text-slate-400">
+                          {group.lastMessageAt
+                            ? new Date(group.lastMessageAt).toLocaleTimeString("en-IN", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+})
+                            : "—"}
+                        </span>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="pr-6 py-4">
+                        <div className="flex items-center gap-1">
+                          <Link href={`/groups/${group._id}`}>
+                            <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
+                              <EyeIcon className="size-4" />
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
+                            <MoreHorizontalIcon className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={9} className="py-16 text-center text-slate-400">
+                    No groups found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* ── Pagination stub ── */}
+      <div className="flex items-center justify-between text-xs text-slate-400">
+        <span>
+          Showing 1 to {filteredGroups.length} of {filteredGroups.length} groups
+        </span>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" className="h-7 w-7 p-0 border-slate-700 text-slate-400" disabled>
+            1
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400" disabled>
+            2
+          </Button>
+        </div>
+      </div>
+      {showImportModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6">
+      <h2 className="mb-4 text-lg font-bold text-white">
+        Import WhatsApp Groups
+      </h2>
+
+      <div className="space-y-3">
+        {whatsappGroups.map((group) => (
+          <label
+            key={group.id}
+            className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-700 p-3"
+          >
+            <div>
+              <p className="font-medium text-white">
+                {group.name}
+              </p>
+
+              <p className="text-xs text-slate-400">
+                {group.participants_count || 0} members
+              </p>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={selectedGroups.includes(group.id)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedGroups((prev) => [...prev, group.id])
+                } else {
+                  setSelectedGroups((prev) =>
+                    prev.filter((id) => id !== group.id)
+                  )
+                }
+              }}
+            />
+          </label>
         ))}
       </div>
+
+      <div className="mt-6 flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setShowImportModal(false)}
+        >
+          Cancel
+        </Button>
+
+        <Button onClick={importSelectedGroups}>
+  Import Selected
+</Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }

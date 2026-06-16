@@ -171,3 +171,27 @@ _Powered by MindMe_`
   token
 )
   }
+
+  export async function getWhatsappGroups() {
+  if (!WHAPI_TOKEN) {
+    throw new Error("WHAPI token missing")
+  }
+
+  const response = await fetch(
+    `${WHAPI_URL}/groups`,
+    {
+      headers: {
+        Authorization: `Bearer ${WHAPI_TOKEN}`,
+      },
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    console.error("WHAPI GROUPS ERROR:", data)
+    throw new Error("Failed to fetch groups")
+  }
+
+  return data
+}

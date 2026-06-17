@@ -20,6 +20,7 @@ import {
   CheckCircle2Icon,
 } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { group } from "@/sanity/schemas/group"
 
 type Group = {
   _id: string
@@ -31,8 +32,10 @@ type Group = {
   lastMessageAt?: string
   pendingCount?: number
   completedCount?: number
+  snoozedCount?: number
   totalTasks?: number
   participants?: number
+  overdueCount?: number
   [key: string]: unknown
 }
 
@@ -75,10 +78,24 @@ function getHealthStyle(health?: string) {
   }
 }
 
-function deriveHealth(pending: number, total: number) {
+function deriveHealth({
+  total,
+  pending,
+  completed,
+  snoozed,
+  overdue,
+}: { total: number; pending: number; completed: number; snoozed: number; overdue: number }) {
   if (total === 0) return "Quiet"
-  const ratio = pending / total
-  if (ratio > 0.5) return "Attention"
+  if (overdue > 0) return "Critical"
+
+  const completionRate = completed / total
+  const pendingRatio = pending / total
+  const snoozedRatio = snoozed / total
+
+  
+  if (snoozedRatio > 0.4) return "Critical"
+  if (completionRate < 0.3 || pendingRatio > 0.7) return "Critical"
+  if (completionRate < 0.6 || pendingRatio > 0.4 || snoozedRatio > 0.2) return "Attention"
   return "Healthy"
 }
 
@@ -166,7 +183,7 @@ async function importSelectedGroups() {
   }
 }
 
-  const filteredGroups = React.useMemo(() => {
+const filteredGroups = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     return (groups || []).filter((g) => {
       const matchesSearch =
@@ -177,8 +194,11 @@ async function importSelectedGroups() {
 
       const total = g.totalTasks ?? g.tasksExtracted ?? 0
       const pending = g.pendingCount ?? 0
-      const derived = deriveHealth(pending, total)
-      const hs = getHealthStyle(derived)
+      const completed = g.completedCount ?? 0
+      const snoozed = g.snoozedCount ?? 0
+      const overdue = g.overdueCount ?? 0
+      const hs = getHealthStyle(deriveHealth({ total, pending, completed, snoozed, overdue }))
+
       return matchesSearch && hs.label.toLowerCase() === healthFilter.toLowerCase()
     })
   }, [groups, healthFilter, search])
@@ -334,8 +354,10 @@ async function importSelectedGroups() {
                   const total = group.totalTasks ?? group.tasksExtracted ?? 0
                   const pending = group.pendingCount ?? 0
                   const completed = group.completedCount ?? 0
+                  const snoozed = group.snoozedCount ?? 0
+                  const overdue = group.overdueCount ?? 0
                   const rate = total > 0 ? Math.round((completed / total) * 100) : 0
-                  const hs = getHealthStyle(deriveHealth(pending, total))
+                  const hs = getHealthStyle(deriveHealth({ total, pending, completed, snoozed, overdue }))
 
                   return (
                     <TableRow

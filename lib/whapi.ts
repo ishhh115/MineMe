@@ -193,5 +193,45 @@ _Powered by MindMe_`
     throw new Error("Failed to fetch groups")
   }
 
-  return data
+  const groups = data.groups || []
+
+  const enrichedGroups = await Promise.all(
+    groups.map(async (group: any) => {
+      try {
+        const detailsResponse = await fetch(
+          `${WHAPI_URL}/groups/${group.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${WHAPI_TOKEN}`,
+            },
+          }
+        )
+
+        const details = await detailsResponse.json()
+
+        return {
+          ...group,
+          participants_count:
+            details.participants_count ||
+            details.participants?.length ||
+            0,
+
+          participants:
+            details.participants || [],
+        }
+      } catch (error) {
+        console.error(
+          `Failed to fetch details for group ${group.id}`,
+          error
+        )
+
+        return group
+      }
+    })
+  )
+
+  return {
+    ...data,
+    groups: enrichedGroups,
+  }
 }

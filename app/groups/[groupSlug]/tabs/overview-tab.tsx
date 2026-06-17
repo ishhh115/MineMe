@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import Link from "next/link"
 
 type Task = {
   _id: string
@@ -154,7 +155,13 @@ export function OverviewTab({ group, tasks, total, pending, completed, completio
               ].map(({ label, value, mono }) => (
                 <div key={label} className="flex justify-between pt-2.5 first:pt-0">
                   <span className="text-slate-400 shrink-0">{label}</span>
-                  <span className={`text-slate-300 text-xs text-right max-w-[160px] truncate ${mono ? "font-mono" : ""}`}>{value}</span>
+                  <span
+  className={`text-slate-300 text-xs text-right max-w-[220px] break-all ${
+    mono ? "font-mono" : ""
+  }`}
+>
+  {value}
+</span>
                 </div>
               ))}
             </div>
@@ -168,7 +175,12 @@ export function OverviewTab({ group, tasks, total, pending, completed, completio
           <CardContent className="p-5">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-semibold text-white">Recent Activity</p>
-              <button className="text-xs text-emerald-400 hover:text-emerald-300">View all activity →</button>
+              <Link
+  href={`/groups/${group._id}?tab=tasks`}
+  className="text-xs text-emerald-400 hover:text-emerald-300"
+>
+  View all activity →
+</Link>
             </div>
             <div className="space-y-4">
               {tasks.slice(0, 6).map((task) => (

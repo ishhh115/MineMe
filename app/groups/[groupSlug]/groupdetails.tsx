@@ -106,9 +106,25 @@ export function GroupDetailClient({
   const completed = group.completedCount ?? 0
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
+  const health =
+  completionRate < 30
+    ? "Critical"
+    : completionRate < 60
+    ? "Attention"
+    : "Healthy"
+
+const healthClass =
+  health === "Healthy"
+    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+    : health === "Attention"
+    ? "border-amber-400/30 bg-amber-500/10 text-amber-300"
+    : "border-red-400/30 bg-red-500/10 text-red-300"
+
   function navigateTab(tab: TabId) {
     router.push(`/groups/${group._id}?tab=${tab}`)
   }
+
+  
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
@@ -127,11 +143,15 @@ export function GroupDetailClient({
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-extrabold text-white">{group.name}</h1>
-              <Badge className="border-emerald-400/30 bg-emerald-500/15 text-emerald-300 text-xs font-medium">
-                Healthy
-              </Badge>
-            </div>
+  <h1 className="text-2xl font-extrabold text-white">{group.name}</h1>
+
+  <Badge
+  variant="outline"
+  className={`${healthClass} text-xs font-medium`}
+>
+  {health}
+</Badge>
+</div>
             <p className="mt-0.5 text-sm text-slate-400">
               {group.participants ?? "—"} members • Created on{" "}
               {group.createdAt
@@ -156,7 +176,7 @@ export function GroupDetailClient({
               <DownloadIcon className="mr-1.5 size-3.5" /> Export
             </Button>
           )}
-          {activeTab === "overview" && (
+         {/*} {activeTab === "overview" && (
             <>
               <Button variant="outline" size="sm" className="border-slate-700 text-slate-300">
                 <EditIcon className="mr-1.5 size-3.5" /> Edit Group
@@ -165,7 +185,8 @@ export function GroupDetailClient({
                 <MoreHorizontalIcon className="size-4" />
               </Button>
             </>
-          )}
+          )} */}
+          
         </div>
       </div>
 
@@ -220,7 +241,7 @@ function GroupTabContent({
   completed: number
   completionRate: number
 }) {
-  // Lazy import tab components
+
   const OverviewTab = React.lazy(() => import("./tabs/overview-tab").then(m => ({ default: m.OverviewTab })))
   const TasksTab = React.lazy(() => import("./tabs/tasks-tab").then(m => ({ default: m.TasksTab })))
   const MessagesTab = React.lazy(() => import("./tabs/messages-tab").then(m => ({ default: m.MessagesTab })))

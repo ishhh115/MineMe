@@ -12,7 +12,6 @@ import {
   SearchIcon,
   UsersIcon,
   PlusIcon,
-  FilterIcon,
   EyeIcon,
   MoreHorizontalIcon,
   CheckSquareIcon,
@@ -21,6 +20,14 @@ import {
 } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { group } from "@/sanity/schemas/group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 type Group = {
   _id: string
@@ -91,7 +98,6 @@ function deriveHealth({
   const completionRate = completed / total
   const pendingRatio = pending / total
   const snoozedRatio = snoozed / total
-
   
   if (snoozedRatio > 0.4) return "Critical"
   if (completionRate < 0.3 || pendingRatio > 0.7) return "Critical"
@@ -146,7 +152,7 @@ export default function GroupsClient({ groups }: { groups: Group[] }) {
   const [whatsappGroups, setWhatsappGroups] = React.useState<any[]>([])
   const [loadingGroups, setLoadingGroups] = React.useState(false)
   const [selectedGroups, setSelectedGroups] = React.useState<string[]>([])
-  
+  const router = useRouter()
 
   const stats = React.useMemo(() => {
     const totalGroups = groups.length
@@ -198,6 +204,65 @@ async function importSelectedGroups() {
     window.location.reload()
   } catch (error) {
     console.error(error)
+  }
+}
+
+async function toggleMonitoring(
+  groupId: string,
+  currentState: boolean
+) {
+  try {
+    const response = await fetch(
+      `/api/groups/${groupId}/monitoring`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isMonitoring: !currentState,
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error("Failed")
+    }
+
+    toast.success(
+      currentState
+        ? "Monitoring paused"
+        : "Monitoring resumed"
+    )
+
+    router.refresh()
+  } catch (error) {
+    console.error(error)
+
+    toast.error("Failed to update monitoring")
+  }
+}
+
+async function deleteGroup(groupId: string) {
+  try {
+    const response = await fetch(
+      `/api/groups/${groupId}`,
+      {
+        method: "DELETE",
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error("Delete failed")
+    }
+
+    toast.success("Group deleted successfully")
+
+    router.refresh()
+  } catch (error) {
+    console.error(error)
+
+    toast.error("Failed to delete group")
   }
 }
 
@@ -330,15 +395,6 @@ const filteredGroups = React.useMemo(() => {
               {f === "All" ? "All" : `#${f}`}
             </button>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 border-slate-700 text-slate-400"
-            onClick={() => { setSearch(""); setHealthFilter("All") }}
-          >
-            <FilterIcon className="mr-1.5 size-3.5" />
-            Filter
-          </Button>
         </div>
       </div>
 
@@ -446,9 +502,56 @@ const filteredGroups = React.useMemo(() => {
                               <EyeIcon className="size-4" />
                             </Button>
                           </Link>
-                          <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
+                          <DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button
+      size="sm"
+      variant="ghost"
+      className="size-8 p-0 text-slate-400 hover:text-white"
+    >
+      <MoreHorizontalIcon className="size-4" />
+    </Button>
+  </DropdownMenuTrigger>
+
+  <DropdownMenuContent
+    align="end"
+    className="bg-slate-900 border-slate-700 text-white"
+  >
+    <DropdownMenuItem asChild>
+      <Link href={`/groups/${group._id}`}>
+        View Details
+      </Link>
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+      onClick={() => {
+        console.log("SYNC", group._id)
+      }}
+    >
+      Sync Group
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+  onClick={() =>
+    toggleMonitoring(
+      group._id,
+      Boolean(group.isMonitoring)
+    )
+  }
+>
+      {group.isMonitoring
+  ? "Pause Monitoring"
+  : "Resume Monitoring"}
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+      className="text-red-400"
+      onClick={() => deleteGroup(group._id)}
+    >
+      Delete Group
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>

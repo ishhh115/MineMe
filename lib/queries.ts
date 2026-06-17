@@ -409,8 +409,20 @@ export async function importWhatsappGroup(
   )
 
   if (existing) {
-    return existing
-  }
+  return await sanityClient
+    .patch(existing._id)
+    .set({
+      participants: group.participants_count || 0,
+
+      members:
+        group.participants?.map((member) => ({
+          name: member.id,
+          phone: member.id,
+          initials: member.id.slice(-2),
+        })) || [],
+    })
+    .commit()
+}
 
   return await sanityClient.create({
     _type: "group",

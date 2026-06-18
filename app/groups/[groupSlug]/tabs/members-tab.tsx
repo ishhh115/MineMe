@@ -121,8 +121,8 @@ const [selectedRole, setSelectedRole] =
 
       userId: matchedUser?._id,
       role:
-  member.portalRole ||
-  matchedUser?.role,
+  matchedUser?.role ||
+  member.portalRole,
       email: matchedUser?.email,
       isVerified: !!matchedUser,
       createdAt: matchedUser?.createdAt,

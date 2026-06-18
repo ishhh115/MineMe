@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { toast } from "sonner"
 
 type Task = { _id: string; assignedTo?: string; status?: string }
 type User = {
@@ -85,6 +86,13 @@ const [selectedUser, setSelectedUser] =
 
 const [selectedRole, setSelectedRole] =
   React.useState("member")
+
+  const [removeMember, setRemoveMember] =
+  React.useState<any>(null)
+
+  const [profileMember, setProfileMember] =
+  React.useState<any>(null)
+
   const [open, setOpen] =
   React.useState(false)
 
@@ -194,6 +202,37 @@ const [selectedRole, setSelectedRole] =
   )
 
   window.location.reload()
+}
+
+async function removeAccess() {
+  if (!removeMember) return
+
+  try {
+    const res = await fetch(
+      "/api/groups/remove-access",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          groupId,
+          phone: removeMember.phone,
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      toast.error("Failed to remove access")
+      return
+    }
+
+    toast.success("Portal access removed")
+
+    window.location.reload()
+  } catch {
+    toast.error("Failed to remove access")
+  }
 }
 
   return (
@@ -306,27 +345,68 @@ const [selectedRole, setSelectedRole] =
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
-          align="end"
-          className="border-slate-700 bg-slate-900 text-slate-200"
-        >
-          <DropdownMenuLabel>
-            Change Role
-          </DropdownMenuLabel>
+  align="end"
+  className="border-slate-700 bg-slate-900 text-slate-200"
+>
+ <DropdownMenuItem
+  onClick={() => {
+    setProfileMember(member)
+  }}
+>
+  View Profile
+</DropdownMenuItem>
 
-          {ROLES.map((role) => (
-            <DropdownMenuItem
-              key={role}
-              disabled={member.role === role}
-              onClick={() => {
-                if (!member.userId) return
-                handleRoleChange(member.userId, role)
-              }}
-            >
-              {role}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
+<DropdownMenuItem
+  disabled={member.role === "admin"}
+  onClick={() => {
+    if (!member.userId) return
+    handleRoleChange(member.userId, "admin")
+  }}
+>
+  Change to Admin
+</DropdownMenuItem>
+
+<DropdownMenuItem
+  disabled={member.role === "manager"}
+  onClick={() => {
+    if (!member.userId) return
+    handleRoleChange(member.userId, "manager")
+  }}
+>
+  Change to Manager
+</DropdownMenuItem>
+
+<DropdownMenuItem
+  disabled={member.role === "member"}
+  onClick={() => {
+    if (!member.userId) return
+    handleRoleChange(member.userId, "member")
+  }}
+>
+  Change to Member
+</DropdownMenuItem>
+
+<DropdownMenuItem
+  disabled={member.role === "guest"}
+  onClick={() => {
+    if (!member.userId) return
+    handleRoleChange(member.userId, "guest")
+  }}
+>
+  Change to Guest
+</DropdownMenuItem>
+
+  <DropdownMenuItem
+    className="text-red-400"
+    onClick={() => {
+      setRemoveMember(member)
+    }}
+  >
+    Remove Access
+  </DropdownMenuItem>
+</DropdownMenuContent>
       </DropdownMenu>
+      
       ) : member.userId ? (
   <Badge
     variant="outline"
@@ -551,6 +631,95 @@ const [selectedRole, setSelectedRole] =
       >
         Link Member
       </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
+<Dialog
+  open={!!profileMember}
+  onOpenChange={() =>
+    setProfileMember(null)
+  }
+>
+  <DialogContent className="border-slate-800 bg-slate-950 text-white">
+    <DialogHeader>
+      <DialogTitle>
+        Member Profile
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+
+      <div>
+        <p className="text-xs text-slate-500">
+          Name
+        </p>
+        <p>
+          {profileMember?.email?.split("@")[0] ||
+            profileMember?.phone}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-500">
+          Email
+        </p>
+        <p>
+          {profileMember?.email || "Not linked"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-500">
+          Phone
+        </p>
+        <p>
+          +{profileMember?.phone}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-500">
+          WhatsApp Role
+        </p>
+        <p>
+          {profileMember?.whatsappRole ||
+            "member"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-500">
+          Portal Role
+        </p>
+        <p>
+          {profileMember?.role ||
+            "No Portal Access"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-500">
+          Account Status
+        </p>
+        <p>
+          {profileMember?.userId
+            ? "Linked User"
+            : "WhatsApp Only"}
+        </p>
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          onClick={() =>
+            setProfileMember(null)
+          }
+        >
+          Close
+        </Button>
+      </div>
+
     </div>
   </DialogContent>
 </Dialog>

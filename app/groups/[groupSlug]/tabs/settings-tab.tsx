@@ -4,9 +4,20 @@ import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { SettingsIcon, WifiIcon, BellRingIcon, PauseCircleIcon, Trash2Icon } from "lucide-react"
+import {
+  WifiIcon,
+  BellRingIcon,
+  PauseCircleIcon,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 type Group = {
   _id: string
@@ -54,6 +65,12 @@ const [description, setDescription] =
 
   const [editing, setEditing] =
   React.useState(false)
+
+  const [deleteOpen, setDeleteOpen] =
+  React.useState(false)
+
+const [deleteText, setDeleteText] =
+  React.useState("")
 
   async function saveGroupSettings() {
   try {
@@ -382,13 +399,83 @@ setTimeout(() => {
         <CardContent className="p-5 space-y-3">
           <p className="text-sm font-semibold text-red-400">Danger Zone</p>
           <p className="text-xs text-slate-400">These actions are irreversible. Please be careful.</p>
-          <Button variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-500/10 text-sm">
-            <Trash2Icon className="mr-1.5 size-4" />
-            Delete Group
-          </Button>
+          <Button
+  variant="outline"
+  onClick={() =>
+    setDeleteOpen(true)
+  }
+  className="border-red-500/40 text-red-400"
+>
+  Delete Group
+</Button>
         </CardContent>
       </Card>
+
+      
       )}
+
+      <Dialog
+  open={deleteOpen}
+  onOpenChange={setDeleteOpen}
+>
+  <DialogContent className="border-slate-800 bg-slate-950 text-white">
+    <DialogHeader>
+      <DialogTitle>
+        Delete Group
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      <p className="text-sm text-slate-400">
+        This action cannot be undone.
+      </p>
+
+      <p className="text-sm text-slate-300">
+  Type the group name below to confirm deletion.
+</p>
+
+<p className="font-semibold text-red-400">
+  {group.name}
+</p>
+
+      <Input
+        value={deleteText}
+        onChange={(e) =>
+          setDeleteText(e.target.value)
+        }
+        placeholder={group.name}
+      />
+
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setDeleteOpen(false)
+            setDeleteText("")
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          disabled={deleteText !== group.name}
+          className="bg-red-600 hover:bg-red-700"
+          onClick={() => {
+  toast.info(
+    "Delete API not connected yet"
+  )
+
+  setDeleteOpen(false)
+  setDeleteText("")
+}}
+        >
+          Delete Group
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
     </div>
   )
 }

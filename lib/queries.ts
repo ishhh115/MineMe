@@ -415,11 +415,12 @@ export async function importWhatsappGroup(
       participants: group.participants_count || 0,
 
       members:
-        group.participants?.map((member) => ({
-          name: member.id,
-          phone: member.id,
-          initials: member.id.slice(-2),
-        })) || [],
+  group.participants?.map((member) => ({
+    name: member.id,
+    phone: member.id,
+    initials: member.id.slice(-2),
+    whatsappRole: member.rank || "member",
+  })) || [],
     })
     .commit()
 }
@@ -438,11 +439,12 @@ export async function importWhatsappGroup(
     participants: group.participants_count || 0,
 
     members:
-      group.participants?.map((member) => ({
-        name: member.id,
-        phone: member.id,
-        initials: member.id.slice(-2),
-      })) || [],
+  group.participants?.map((member) => ({
+    name: member.id,
+    phone: member.id,
+    initials: member.id.slice(-2),
+    whatsappRole: member.rank || "member",
+  })) || [],
 
     isMonitoring: true,
 
@@ -453,4 +455,11 @@ export async function importWhatsappGroup(
 
     createdAt: new Date().toISOString(),
   })
+}
+
+export async function updateUserRole(userId: string, role: string) {
+  return await sanityClient
+    .patch(userId)
+    .set({ role })
+    .commit()
 }

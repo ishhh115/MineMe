@@ -5,55 +5,191 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { SearchIcon, MoreHorizontalIcon } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-type Task = {
+type Task = { _id: string; assignedTo?: string; status?: string }
+type User = {
   _id: string
-  assignedTo?: string
-  status?: string
+  name?: string
+  email?: string
+  phone?: string
+  role?: string
+  isVerified?: boolean
   createdAt?: string
 }
 
-const PAGE_SIZE = 10
+type GroupMember = {
+  name: string
+  phone: string
+  initials: string
+  whatsappRole?: string
+}
 
-export function MembersTab({ tasks, participants }: { tasks: Task[]; participants?: number }) {
+const PAGE_SIZE = 10
+const ROLES = ["admin", "manager", "member", "guest"] as const
+
+function roleBadgeClass(role?: string) {
+  switch (role) {
+    case "admin": return "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+    case "manager": return "border-blue-400/30 bg-blue-500/10 text-blue-300"
+    case "guest": return "border-slate-600 bg-slate-800/50 text-slate-400"
+    default: return "border-slate-600 bg-slate-800/50 text-slate-300"
+  }
+}
+
+export function MembersTab({
+  users,
+  tasks,
+  members,
+  groupId,
+}: {
+  users: User[]
+  tasks: Task[]
+  members: GroupMember[]
+  groupId: string
+}) {
   const [search, setSearch] = React.useState("")
   const [page, setPage] = React.useState(1)
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
-  // Derive members from task assignees
-  const members = React.useMemo(() => {
+  const [selectedMember, setSelectedMember] =
+  React.useState<any>(null)
+
+const [selectedUser, setSelectedUser] =
+  React.useState("")
+
+const [selectedRole, setSelectedRole] =
+  React.useState("member")
+  const [open, setOpen] =
+  React.useState(false)
+
+  const taskStats = React.useMemo(() => {
     const map: Record<string, { total: number; completed: number; pending: number }> = {}
     tasks.forEach((t) => {
-      if (t.assignedTo) {
-        if (!map[t.assignedTo]) map[t.assignedTo] = { total: 0, completed: 0, pending: 0 }
-        map[t.assignedTo].total++
-        if (t.status === "completed") map[t.assignedTo].completed++
-        if (t.status === "pending") map[t.assignedTo].pending++
-      }
+      const key = t.assignedTo?.toLowerCase().trim()
+      if (!key) return
+      if (!map[key]) map[key] = { total: 0, completed: 0, pending: 0 }
+      map[key].total++
+      if (t.status === "completed") map[key].completed++
+      if (t.status === "pending") map[key].pending++
     })
-    return Object.entries(map)
-      .sort((a, b) => b[1].total - a[1].total)
-      .map(([name, data]) => ({ name, ...data }))
+    return map
   }, [tasks])
 
+  const memberRows = React.useMemo(() => {
+  return (members || []).map((member) => {
+    const key = member.name?.toLowerCase().trim()
+
+    const stats =
+      (key && taskStats[key]) || {
+        total: 0,
+        completed: 0,
+        pending: 0,
+      }
+
+    const matchedUser = users.find(
+  (u) =>
+    u._id === member.linkedUserId
+)
+
+    return {
+      ...member,
+      ...stats,
+
+      whatsappRole: member.whatsappRole,
+
+      userId: matchedUser?._id,
+      role:
+  member.portalRole ||
+  matchedUser?.role,
+      email: matchedUser?.email,
+      isVerified: !!matchedUser,
+      createdAt: matchedUser?.createdAt,
+    }
+  })
+}, [members, users, taskStats])
+
   const filtered = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return members.filter(m => !q || m.name.toLowerCase().includes(q))
-  }, [members, search])
+  const q = search.trim().toLowerCase()
+
+  return memberRows.filter(
+    (m) =>
+      !q ||
+      m.phone.toLowerCase().includes(q)
+  )
+}, [memberRows, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  // Avatar color palette
-  const colors = [
-    "bg-violet-600", "bg-emerald-600", "bg-blue-600",
-    "bg-amber-600", "bg-rose-600", "bg-cyan-600",
-  ]
+  const colors = ["bg-violet-600", "bg-emerald-600", "bg-blue-600", "bg-amber-600", "bg-rose-600", "bg-cyan-600"]
+
+  async function handleRoleChange(userId: string, role: string) {
+    setUpdatingId(userId)
+    try {
+      const res = await fetch("/api/users/role", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || "Failed to update role")
+        return
+      }
+      window.location.reload()
+    } catch (error) {
+      console.error(error)
+      alert("Failed to update role")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function linkMember() {
+  if (!selectedMember || !selectedUser) return
+
+  await fetch(
+    "/api/groups/link-member",
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+  userId: selectedUser,
+  role: selectedRole,
+}),
+    }
+  )
+
+  window.location.reload()
+}
 
   return (
     <div className="space-y-4">
-      {/* Search */}
       <div className="flex items-center gap-2">
         <div className="relative w-56">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
@@ -63,64 +199,143 @@ export function MembersTab({ tasks, participants }: { tasks: Task[]; participant
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-xl border border-slate-800 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-slate-800 bg-slate-900/60 hover:bg-slate-900/60">
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400 pl-5">Member</TableHead>
+              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Phone</TableHead>
+              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Access</TableHead>
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Role</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Tasks Assigned</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Completed</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Pending</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Status</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Joined On</TableHead>
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400 pr-5">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length > 0 ? paginated.map((member, idx) => (
-              <TableRow key={member.name} className="border-slate-800 hover:bg-slate-900/40">
-                <TableCell className="pl-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white", colors[idx % colors.length])}>
-                      {member.name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{member.name}</p>
-                      <p className="text-xs text-slate-400">{member.name.toLowerCase().replace(/\s+/g, "")}@gmail.com</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="py-4">
-                  <Badge variant="outline" className={cn("text-[11px] font-medium",
-                    idx === 0 || member.total > 15
-                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
-                      : "border-slate-600 bg-slate-800/50 text-slate-300"
-                  )}>
-                    {idx === 0 || member.total > 15 ? "⭐ Admin" : "Member"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-4 text-sm font-semibold text-white">{member.total}</TableCell>
-                <TableCell className="py-4 text-sm font-semibold text-emerald-300">{member.completed}</TableCell>
-                <TableCell className="py-4 text-sm font-semibold text-amber-300">{member.pending}</TableCell>
-                <TableCell className="py-4">
-                  <Badge variant="outline" className="border-emerald-400/30 bg-emerald-500/10 text-emerald-300 text-[11px]">
-                    Active
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-4 text-sm text-slate-400">
-                  12 May 2024
-                </TableCell>
-                <TableCell className="pr-5 py-4">
-                  <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                    <MoreHorizontalIcon className="size-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+<TableRow
+  key={member.phone}
+  className="border-slate-800 hover:bg-slate-900/40"
+>
+  {/* MEMBER */}
+  <TableCell className="pl-5 py-4">
+    <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
+          colors[idx % colors.length]
+        )}
+      >
+        {member.initials || "?"}
+      </div>
+
+      <div>
+        <p className="text-sm font-medium text-white">
+          {member.userId
+            ? member.email?.split("@")[0]
+            : member.phone}
+        </p>
+      </div>
+    </div>
+  </TableCell>
+
+  {/* PHONE */}
+  <TableCell className="text-slate-300">
+    +{member.phone}
+  </TableCell>
+
+  {/* ACCESS */}
+  <TableCell>
+    <Badge
+      variant="outline"
+      className={
+        member.userId
+          ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+          : "border-blue-400/30 bg-blue-500/10 text-blue-300"
+      }
+    >
+      {member.userId
+        ? "MindMe User"
+        : "WhatsApp Member"}
+    </Badge>
+  </TableCell>
+
+  {/* ROLE */}
+<TableCell className="py-4">
+  <div className="flex flex-col gap-1">
+    <Badge
+      variant="outline"
+      className="text-[11px] capitalize border-sky-500/30 bg-sky-500/10 text-sky-300"
+    >
+      {member.whatsappRole || "member"}
+    </Badge>
+
+    {member.userId && (
+      <Badge
+        variant="outline"
+        className={cn(
+          "text-[10px] capitalize",
+          roleBadgeClass(member.role)
+        )}
+      >
+        Portal: {member.role}
+      </Badge>
+    )}
+  </div>
+</TableCell>
+
+  {/* ACTIONS */}
+  <TableCell className="pr-5">
+    {member.userId ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="size-8 p-0 text-slate-400 hover:text-white"
+          >
+            <MoreHorizontalIcon className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="end"
+          className="border-slate-700 bg-slate-900 text-slate-200"
+        >
+          <DropdownMenuLabel>
+            Change Role
+          </DropdownMenuLabel>
+
+          {ROLES.map((role) => (
+            <DropdownMenuItem
+              key={role}
+              disabled={member.role === role}
+              onClick={() => {
+                if (!member.userId) return
+                handleRoleChange(member.userId, role)
+              }}
+            >
+              {role}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <Button
+  size="sm"
+  variant="outline"
+  onClick={() => {
+    setSelectedMember(member)
+    setOpen(true)
+  }}
+>
+  Invite
+</Button>
+    )}
+  </TableCell>
+</TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={8} className="py-16 text-center text-sm text-slate-400">
+                <TableCell colSpan={5} className="py-16 text-center text-sm text-slate-400">
                   No members found
                 </TableCell>
               </TableRow>
@@ -129,9 +344,8 @@ export function MembersTab({ tasks, participants }: { tasks: Task[]; participant
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-xs text-slate-400">
-        <span>Showing 1 to {paginated.length} of {participants ?? filtered.length} members</span>
+        <span>Showing 1 to {paginated.length} of {filtered.length} members</span>
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" className="h-7 w-7 p-0 border-slate-700 text-slate-400"
             disabled={page === 1} onClick={() => setPage(p => p - 1)}>‹</Button>
@@ -144,6 +358,182 @@ export function MembersTab({ tasks, participants }: { tasks: Task[]; participant
             disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>›</Button>
         </div>
       </div>
+
+      <Dialog
+  open={!!selectedMember}
+  onOpenChange={() => {
+    setSelectedMember(null)
+  }}
+>
+  <DialogContent className="bg-slate-950 border-slate-800">
+    <DialogHeader>
+      <DialogTitle>
+        Link WhatsApp Member
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-slate-400">
+          Phone
+        </p>
+
+        <p className="font-medium">
+          +{selectedMember?.phone}
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm text-slate-400">
+          Select User
+        </p>
+
+        <select
+          className="w-full rounded-md border border-slate-700 bg-slate-900 p-2"
+          value={selectedUser}
+          onChange={(e) =>
+            setSelectedUser(e.target.value)
+          }
+        >
+          <option value="">
+            Select User
+          </option>
+
+          {users.map((user) => (
+            <option
+              key={user._id}
+              value={user._id}
+            >
+              {user.name} ({user.email})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm text-slate-400">
+          Portal Role
+        </p>
+
+        <select
+          className="w-full rounded-md border border-slate-700 bg-slate-900 p-2"
+          value={selectedRole}
+          onChange={(e) =>
+            setSelectedRole(e.target.value)
+          }
+        >
+          {ROLES.map((role) => (
+            <option
+              key={role}
+              value={role}
+            >
+              {role}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <Button
+        className="w-full"
+        onClick={linkMember}
+      >
+        Link Member
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
+<Dialog
+  open={open}
+  onOpenChange={setOpen}
+>
+  <DialogContent className="border-slate-800 bg-slate-950 text-white">
+    <DialogHeader>
+      <DialogTitle>
+        Link WhatsApp Member
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-slate-400 mb-2">
+          WhatsApp Member
+        </p>
+
+        <div className="rounded-lg border border-slate-800 p-3">
+          {selectedMember?.phone}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-400 mb-2">
+          Select MindMe User
+        </p>
+
+        <Select
+          value={selectedUser}
+          onValueChange={setSelectedUser}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choose user" />
+          </SelectTrigger>
+
+          <SelectContent>
+            {users.map((user) => (
+              <SelectItem
+                key={user._id}
+                value={user._id}
+              >
+                {user.name} ({user.email})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-400 mb-2">
+          Portal Role
+        </p>
+
+        <Select
+          value={selectedRole}
+          onValueChange={setSelectedRole}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="admin">
+              Admin
+            </SelectItem>
+
+            <SelectItem value="manager">
+              Manager
+            </SelectItem>
+
+            <SelectItem value="member">
+              Member
+            </SelectItem>
+
+            <SelectItem value="guest">
+              Guest
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button
+        className="w-full"
+        onClick={linkMember}
+      >
+        Link Member
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
     </div>
   )
 }

@@ -208,6 +208,10 @@ _Powered by MindMe_`
         )
 
         const details = await detailsResponse.json()
+        console.log(
+  "WHAPI PARTICIPANTS:",
+  details.participants
+)
 
         return {
           ...group,

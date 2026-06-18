@@ -64,6 +64,22 @@ type Group = {
   pendingCount?: number
   completedCount?: number
   totalTasks?: number
+
+  members?: Array<{
+    name?: string
+    phone?: string
+    initials?: string
+  }>
+}
+
+type User = {
+  _id: string
+  name?: string
+  email?: string
+  phone?: string
+  role?: string
+  isVerified?: boolean
+  createdAt?: string
 }
 
 const TABS = [
@@ -92,12 +108,14 @@ export function GroupDetailClient({
   tasks,
   notifications,
   messages,
+  users,
   activeTab,
 }: {
   group: Group
   tasks: Task[]
   notifications: Notification[]
   messages: Message[]
+  users: User[]
   activeTab: TabId
 }) {
   const router = useRouter()
@@ -153,10 +171,10 @@ const healthClass =
 </Badge>
 </div>
             <p className="mt-0.5 text-sm text-slate-400">
-              {group.participants ?? "—"} members • Created on{" "}
+              {group.participants ?? "—"} WhatsApp Participants • Created on{" "}
               {group.createdAt
-                ? new Date(group.createdAt).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" })
-                : "—"}
+  ? new Date(group.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+  : "—"}
             </p>
           </div>
         </div>
@@ -168,7 +186,7 @@ const healthClass =
           )}
           {activeTab === "members" && (
             <Button className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
-              <PlusIcon className="mr-1.5 size-4" /> Add Member
+              <PlusIcon className="mr-1.5 size-4" /> Invite Member
             </Button>
           )}
           {(activeTab === "tasks" || activeTab === "messages") && (
@@ -186,7 +204,7 @@ const healthClass =
               </Button>
             </>
           )} */}
-          
+
         </div>
       </div>
 
@@ -218,6 +236,7 @@ const healthClass =
         tasks={tasks}
         notifications={notifications}
         messages={messages}
+        users={users}
         total={total}
         pending={pending}
         completed={completed}
@@ -228,7 +247,7 @@ const healthClass =
 }
 
 function GroupTabContent({
-  activeTab, group, tasks, notifications, messages,
+  activeTab, group, tasks, notifications, messages, users,
   total, pending, completed, completionRate,
 }: {
   activeTab: TabId
@@ -236,6 +255,7 @@ function GroupTabContent({
   tasks: Task[]
   notifications: Notification[]
   messages: Message[]
+  users: User[]
   total: number
   pending: number
   completed: number
@@ -255,7 +275,14 @@ function GroupTabContent({
       )}
       {activeTab === "tasks" && <TasksTab tasks={tasks} />}
       {activeTab === "messages" && <MessagesTab messages={messages} messagesCount={group.messagesCount} />}
-      {activeTab === "members" && <MembersTab tasks={tasks} participants={group.participants} />}
+      {activeTab === "members" && (
+  <MembersTab
+  users={users}
+  tasks={tasks}
+  members={group.members || []}
+  groupId={group._id}
+/>
+)}
       {activeTab === "settings" && <SettingsTab group={group} />}
     </React.Suspense>
   )

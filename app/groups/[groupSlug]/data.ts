@@ -1,20 +1,19 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { sanityClient } from "@/lib/sanity"
+import { getUsers } from "@/lib/queries"
 
 export async function getGroupDetailData(groupId: string) {
   try {
     const session = await getServerSession(authOptions)
     const orgId = (session?.user as { organisationId?: string } | undefined)?.organisationId
 
-    console.log("GROUP DETAIL FETCH:", { groupId, orgId }) 
-    
     if (!orgId) throw new Error("No organisation ID found")
 
     const group = await sanityClient.fetch(
       `*[_type == "group" && _id == $groupId && organisation._ref == $orgId][0] {
         _id, name, chatId, isMonitoring, messagesCount, tasksExtracted,
-        lastMessageAt, createdAt, participants, description,
+        lastMessageAt, createdAt, participants, members, description,
         "pendingCount": count(*[_type == "task" && group._ref == ^._id && status == "pending"]),
         "completedCount": count(*[_type == "task" && group._ref == ^._id && status == "completed"]),
         "totalTasks": count(*[_type == "task" && group._ref == ^._id])
@@ -22,7 +21,13 @@ export async function getGroupDetailData(groupId: string) {
       { groupId, orgId }
     )
 
-    if (!group) return { group: null, tasks: [], notifications: [], messages: [] }
+    console.log(
+  "GROUP FROM SANITY:",
+  JSON.stringify(group, null, 2)
+)
+
+    console.log("GROUP MEMBERS:", group?.members)
+    if (!group) return { group: null, tasks: [], notifications: [], messages: [], users: [] }
 
     const tasks = await sanityClient.fetch(
       `*[_type == "task" && group._ref == $groupId] | order(createdAt desc)[0...20] {
@@ -47,9 +52,12 @@ export async function getGroupDetailData(groupId: string) {
       { groupId }
     )
 
-    return { group, tasks, notifications, messages }
+    const users = await getUsers(orgId)
+    console.log("USERS FETCHED FOR GROUP DETAIL:", users)
+
+    return { group, tasks, notifications, messages, users }
   } catch (error) {
     console.error("Group detail data fetch error:", error)
-    return { group: null, tasks: [], notifications: [], messages: [] }
+    return { group: null, tasks: [], notifications: [], messages: [], users: [] }
   }
 }

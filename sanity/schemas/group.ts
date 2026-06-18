@@ -38,10 +38,43 @@ export const group = {
         {
           type: "object",
           fields: [
-            { name: "name", title: "Name", type: "string" },
-            { name: "phone", title: "Phone", type: "string" },
-            { name: "initials", title: "Initials", type: "string" },
-          ],
+  {
+    name: "name",
+    title: "Name",
+    type: "string",
+  },
+  {
+    name: "phone",
+    title: "Phone",
+    type: "string",
+  },
+  {
+    name: "initials",
+    title: "Initials",
+    type: "string",
+  },
+  {
+    name: "whatsappRole",
+    title: "WhatsApp Role",
+    type: "string",
+    options: {
+  list: [
+    { title: "Creator", value: "creator" },
+    { title: "Admin", value: "admin" },
+    { title: "Member", value: "member" },
+  ],
+},
+    initialValue: "member",
+  },
+  {
+    name: "linkedUserId",
+    type: "string",
+  },
+  {
+    name: "portalRole",
+    type: "string",
+  },
+],
         },
       ],
     },

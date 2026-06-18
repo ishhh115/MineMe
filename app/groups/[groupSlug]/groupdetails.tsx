@@ -291,7 +291,10 @@ function GroupTabContent({
   currentUserRole={currentUserRole}
 />
 )} 
-      {activeTab === "settings" && <SettingsTab group={group} />}
+      {activeTab === "settings" && <SettingsTab
+  group={group}
+  currentUserRole={currentUserRole}
+/>}
     </React.Suspense>
   )
 }

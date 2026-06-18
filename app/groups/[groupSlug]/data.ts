@@ -23,6 +23,11 @@ export async function getGroupDetailData(groupId: string) {
         _id, name, chatId, isMonitoring, messagesCount, tasksExtracted,
         lastMessageAt, createdAt, participants, members, description,
         "pendingCount": count(*[_type == "task" && group._ref == ^._id && status == "pending"]),
+        "snoozedCount": count(*[
+  _type == "task" &&
+  group._ref == ^._id &&
+  status == "snoozed"
+]),
         "completedCount": count(*[_type == "task" && group._ref == ^._id && status == "completed"]),
         "totalTasks": count(*[_type == "task" && group._ref == ^._id])
       }`,

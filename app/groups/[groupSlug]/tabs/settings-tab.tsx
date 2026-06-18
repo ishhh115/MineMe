@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,7 +56,7 @@ export function SettingsTab({
 }) {
   const [loading, setLoading] =
     React.useState(false)
-    
+    const router = useRouter()
 
 const [name, setName] =
   React.useState(group.name || "")
@@ -140,6 +141,42 @@ setTimeout(() => {
     window.location.reload()
   } finally {
     setLoading(false)
+  }
+}
+
+async function deleteGroup() {
+  try {
+    const res = await fetch(
+      "/api/groups/delete",
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          groupId: group._id,
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      toast.error(
+        "Failed to delete group"
+      )
+      return
+    }
+
+    toast.success(
+      "Group deleted successfully"
+    )
+
+    setTimeout(() => {
+      router.push("/groups")
+    }, 1000)
+  } catch {
+    toast.error(
+      "Failed to delete group"
+    )
   }
 }
 
@@ -457,20 +494,13 @@ setTimeout(() => {
           Cancel
         </Button>
 
-        <Button
-          disabled={deleteText !== group.name}
-          className="bg-red-600 hover:bg-red-700"
-          onClick={() => {
-  toast.info(
-    "Delete API not connected yet"
-  )
-
-  setDeleteOpen(false)
-  setDeleteText("")
-}}
-        >
-          Delete Group
-        </Button>
+<Button
+  disabled={deleteText !== group.name}
+  className="bg-red-600 hover:bg-red-700"
+  onClick={deleteGroup}
+>
+  Delete Group
+</Button>
       </div>
     </div>
   </DialogContent>

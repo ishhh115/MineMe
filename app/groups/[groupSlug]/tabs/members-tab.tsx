@@ -49,13 +49,6 @@ type GroupMember = {
   portalRole?: string
 }
 
-type Invite = {
-  _id: string
-  phone?: string
-  role?: string
-  status?: string
-  sentAt?: string
-}
 
 const PAGE_SIZE = 10
 const ROLES = ["admin", "manager", "member", "guest"] as const
@@ -92,14 +85,12 @@ export function MembersTab({
   users,
   tasks,
   members,
-  invites,
   groupId,
   currentUserRole,
 }: {
   users: User[]
   tasks: Task[]
   members: GroupMember[]
-  invites: Invite[]
   groupId: string
   currentUserRole: string
 }) {
@@ -127,21 +118,6 @@ const [selectedRole, setSelectedRole] =
 
       const isAdmin =
   currentUserRole === "admin"
-
-  const pendingInvites =
-  invites.filter(
-    (i) => i.status === "pending"
-  )
-
-const acceptedInvites =
-  invites.filter(
-    (i) => i.status === "accepted"
-  )
-
-const expiredInvites =
-  invites.filter(
-    (i) => i.status === "expired"
-  )
 
   const taskStats = React.useMemo(() => {
     const map: Record<string, { total: number; completed: number; pending: number }> = {}
@@ -281,112 +257,7 @@ async function removeAccess() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-4">
 
-  <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-    <p className="text-xs text-slate-400">
-      Active Members
-    </p>
-    <p className="mt-2 text-2xl font-bold text-white">
-      {members.length}
-    </p>
-  </div>
-
-  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-    <p className="text-xs text-amber-300">
-      Pending Invites
-    </p>
-    <p className="mt-2 text-2xl font-bold text-white">
-      {pendingInvites.length}
-    </p>
-  </div>
-
-  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-    <p className="text-xs text-emerald-300">
-      Accepted
-    </p>
-    <p className="mt-2 text-2xl font-bold text-white">
-      {acceptedInvites.length}
-    </p>
-  </div>
-
-  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-    <p className="text-xs text-red-300">
-      Expired
-    </p>
-    <p className="mt-2 text-2xl font-bold text-white">
-      {expiredInvites.length}
-    </p>
-  </div>
-
-</div>
-
-{pendingInvites.length > 0 && (
-  <div className="mt-8">
-    <h3 className="mb-4 text-lg font-semibold text-white">
-      Pending Invites
-    </h3>
-
-    <div className="rounded-xl border border-slate-800 overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Phone</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Sent</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {pendingInvites.map((invite) => (
-            <TableRow key={invite._id}>
-              <TableCell>
-                +91 {invite.phone}
-              </TableCell>
-
-              <TableCell>
-                {invite.role}
-              </TableCell>
-
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className="border-amber-500/30 bg-amber-500/10 text-amber-300"
-                >
-                  Pending
-                </Badge>
-              </TableCell>
-
-              <TableCell>
-                {timeAgo(invite.sentAt)}
-              </TableCell>
-
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                  >
-                    Resend
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
-)}
       <div className="flex items-center gap-2">
         <div className="relative w-56">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />

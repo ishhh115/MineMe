@@ -14,6 +14,7 @@ import {
   CheckSquareIcon,
   MessageCircleIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   PlusIcon,
   DownloadIcon,
   Send,
@@ -115,6 +116,7 @@ const TABS = [
   { id: "tasks", label: "Tasks", icon: CheckSquareIcon },
   { id: "messages", label: "Messages", icon: MessageCircleIcon },
   { id: "members", label: "Members", icon: UsersIcon },
+  { id: "access", label: "Access", icon: ShieldCheckIcon },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ] as const
 
@@ -423,6 +425,7 @@ function GroupTabContent({
   const MessagesTab = React.lazy(() => import("./tabs/messages-tab").then(m => ({ default: m.MessagesTab })))
   const MembersTab = React.lazy(() => import("./tabs/members-tab").then(m => ({ default: m.MembersTab })))
   const SettingsTab = React.lazy(() => import("./tabs/settings-tab").then(m => ({ default: m.SettingsTab })))
+  const AccessTab = React.lazy(() => import("./tabs/access-tab").then(m => ({ default: m.AccessTab })))
 
   return (
     <React.Suspense fallback={<div className="py-12 text-center text-slate-400 text-sm">Loading...</div>}>
@@ -441,6 +444,11 @@ function GroupTabContent({
   currentUserRole={currentUserRole}
 />
 )} 
+{activeTab === "access" && (
+  <AccessTab
+    invites={invites}
+  />
+)}
       {activeTab === "settings" && <SettingsTab
   group={group}
   currentUserRole={currentUserRole}

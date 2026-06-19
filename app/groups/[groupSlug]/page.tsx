@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { getGroupDetailData } from "./data"
 import { GroupDetailClient } from "./groupdetails"
 
-type TabId = "overview" | "tasks" | "messages" | "members" | "settings"
+type TabId = "overview" | "tasks" | "messages" | "members" | "access" | "settings"
 
 type PageProps = {
   params: Promise<{ groupSlug: string }>
@@ -13,7 +13,7 @@ export default async function GroupDetailPage({ params, searchParams }: PageProp
   const { groupSlug } = await params
   const { tab } = await searchParams
 
-  const validTabs: TabId[] = ["overview", "tasks", "messages", "members", "settings"]
+  const validTabs: TabId[] = ["overview", "tasks", "messages", "members", "access", "settings"]
   const activeTab: TabId = validTabs.includes(tab as TabId) ? (tab as TabId) : "overview"
 
   const { group, tasks, notifications, messages, users ,currentUser ,invites } = await getGroupDetailData(groupSlug)

@@ -43,6 +43,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group"
+import { useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 type TaskRecord = {
@@ -84,12 +85,27 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
   // styled delete confirmation dialog
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [taskToDelete, setTaskToDelete] = React.useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const taskIdFromUrl =searchParams.get("taskId")
+  const router = useRouter()
 
   // debounce user query
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedUserQuery(userQuery), 300)
     return () => clearTimeout(t)
   }, [userQuery])
+
+  React.useEffect(() => {
+  if (!taskIdFromUrl) return
+
+  const task = localTasks.find(
+    (t) => t._id === taskIdFromUrl
+  )
+
+  if (task) {
+    setSelectedTask(task)
+  }
+}, [taskIdFromUrl, localTasks])
 
   // fetch users when debounced query changes
   React.useEffect(() => {
@@ -469,9 +485,21 @@ async function confirmCompleted(taskId: string) {
       </Card>
 
       <Dialog
-        open={Boolean(selectedTask)}
-        onOpenChange={(open) => !open && setSelectedTask(null)}
-      >
+  open={Boolean(selectedTask)}
+  onOpenChange={(open) => {
+    if (open) return
+
+    const returnTo =
+      searchParams.get("returnTo")
+
+    if (returnTo) {
+      router.push(returnTo)
+      return
+    }
+
+    setSelectedTask(null)
+  }}
+>
         <DialogContent className="!max-w-[1800px] max-h-[95vh] overflow-y-auto border-slate-300/15 bg-slate-950 text-white">
           {selectedTask && (
             <>

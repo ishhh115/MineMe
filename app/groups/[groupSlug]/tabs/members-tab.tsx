@@ -49,7 +49,6 @@ type GroupMember = {
   portalRole?: string
 }
 
-
 const PAGE_SIZE = 10
 const ROLES = ["admin", "manager", "member", "guest"] as const
 

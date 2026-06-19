@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 type Task = {
@@ -86,6 +87,8 @@ export function TasksTab({ tasks }: { tasks: Task[] }) {
 const [loadingAction, setLoadingAction] =
   React.useState(false)
 
+  const router = useRouter()
+
   async function confirmCompleted(taskId: string) {
   setLoadingAction(true)
 
@@ -112,6 +115,8 @@ const [loadingAction, setLoadingAction] =
     setLoadingAction(false)
   }
 }
+
+
 
 async function resendReminder(
   taskId: string
@@ -220,9 +225,6 @@ async function deleteTask(
         </select>
 
         <div className="ml-auto">
-          <Button variant="outline" size="sm" className="h-9 border-slate-700 text-slate-400">
-            Filter
-          </Button>
         </div>
       </div>
 
@@ -272,17 +274,62 @@ async function deleteTask(
                 </TableCell>
                 <TableCell className="pr-5 py-4">
                   <div className="flex items-center gap-1">
-                    <Button
- size="sm"
- variant="ghost"
- className="size-8 p-0 text-slate-400 hover:text-white"
- onClick={() => setSelectedTask(task)}
+                    <DropdownMenu>
+  <DropdownMenuTrigger asChild>
+  <Button
+    size="sm"
+    variant="ghost"
+    className="size-8 p-0 text-slate-400 hover:text-white"
+  >
+    <MoreHorizontalIcon className="size-4" />
+  </Button>
+</DropdownMenuTrigger>
+
+  <DropdownMenuContent
+    align="end"
+    className="border-slate-700 bg-slate-900 text-white"
+  >
+    <DropdownMenuItem
+  onClick={() =>
+    router.push(
+  `/tasks?taskId=${task._id}&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`
+)
+  }
 >
-  <EyeIcon className="size-4" />
-</Button>
-                    <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                      <MoreHorizontalIcon className="size-4" />
-                    </Button>
+  Open in Tasks Center
+</DropdownMenuItem>
+    <DropdownMenuItem
+      onClick={() => setSelectedTask(task)}
+    >
+      View Details
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+      onClick={() =>
+        confirmCompleted(task._id)
+      }
+    >
+      Mark Complete
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+      onClick={() =>
+        resendReminder(task._id)
+      }
+    >
+      Resend Reminder
+    </DropdownMenuItem>
+
+    <DropdownMenuItem
+      className="text-red-400"
+      onClick={() =>
+        deleteTask(task._id)
+      }
+    >
+      Delete Task
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
                   </div>
                 </TableCell>
               </TableRow>
@@ -327,6 +374,25 @@ async function deleteTask(
           <DialogTitle>
             {selectedTask.taskText}
           </DialogTitle>
+          <div className="flex gap-2 mt-3">
+  <Badge
+    variant="outline"
+    className={getStatusStyle(
+      selectedTask.status
+    )}
+  >
+    {capitalize(selectedTask.status)}
+  </Badge>
+
+  <Badge
+    variant="outline"
+    className={getUrgencyStyle(
+      selectedTask.urgency
+    )}
+  >
+    {capitalize(selectedTask.urgency)}
+  </Badge>
+</div>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -353,6 +419,18 @@ async function deleteTask(
               )}
             </p>
           </div>
+
+          <div>
+  <p className="text-xs text-slate-500">
+    Created At
+  </p>
+
+  <p>
+    {formatDate(
+      selectedTask.createdAt
+    )}
+  </p>
+</div>
 
           <div>
             <p className="text-xs text-slate-500">

@@ -16,7 +16,7 @@ export default async function GroupDetailPage({ params, searchParams }: PageProp
   const validTabs: TabId[] = ["overview", "tasks", "messages", "members", "settings"]
   const activeTab: TabId = validTabs.includes(tab as TabId) ? (tab as TabId) : "overview"
 
-  const { group, tasks, notifications, messages, users ,currentUser } = await getGroupDetailData(groupSlug)
+  const { group, tasks, notifications, messages, users ,currentUser ,invites } = await getGroupDetailData(groupSlug)
 
   if (!group) notFound()
 
@@ -28,6 +28,7 @@ export default async function GroupDetailPage({ params, searchParams }: PageProp
       messages={messages}
       users={users}
       currentUserRole={currentUser?.role || "member"}
+      invites={invites}
       activeTab={activeTab}
     />
   )

@@ -65,13 +65,28 @@ export async function getGroupDetailData(groupId: string) {
       { groupId }
     )
 
+    const invites = await sanityClient.fetch(
+  `*[_type == "invite" && group._ref == $groupId]
+   | order(createdAt desc) {
+      _id,
+      phone,
+      role,
+      status,
+      sentAt,
+      acceptedAt,
+      expiresAt,
+      createdAt
+   }`,
+  { groupId }
+)
+
     const users = await getUsers(orgId)
     const currentUser = users.find(
   (u: User) => u.email === session?.user?.email
 )
     console.log("USERS FETCHED FOR GROUP DETAIL:", users)
 
-    return { group, tasks, notifications, messages, users ,currentUser}
+    return { group, tasks, notifications, messages, users ,currentUser ,invites}
   } catch (error) {
     console.error("Group detail data fetch error:", error)
     return { group: null, tasks: [], notifications: [], messages: [], users: [] }

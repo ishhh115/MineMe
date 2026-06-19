@@ -16,7 +16,24 @@ import {
   SettingsIcon,
   PlusIcon,
   DownloadIcon,
+  Send,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 
 type Task = {
@@ -85,6 +102,14 @@ type User = {
   createdAt?: string
 }
 
+type Invite = {
+  _id: string
+  phone?: string
+  role?: string
+  status?: string
+  sentAt?: string
+}
+
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutDashboardIcon },
   { id: "tasks", label: "Tasks", icon: CheckSquareIcon },
@@ -114,6 +139,7 @@ export function GroupDetailClient({
   users,
   activeTab,
   currentUserRole,
+  invites,
 }: {
   group: Group
   tasks: Task[]
@@ -122,8 +148,19 @@ export function GroupDetailClient({
   users: User[]
   activeTab: TabId
   currentUserRole : string
+  invites: Invite[]
 }) {
   const router = useRouter()
+
+  const [inviteOpen, setInviteOpen] =
+  React.useState(false)
+
+const [invitePhone, setInvitePhone] =
+  React.useState("")
+
+const [inviteRole, setInviteRole] =
+  React.useState("member")
+
   const total = group.totalTasks ?? 0
   const pending = group.pendingCount ?? 0
   const completed = group.completedCount ?? 0
@@ -190,9 +227,13 @@ const healthClass =
             </Button>
           )}
           {activeTab === "members" && (
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
-              <PlusIcon className="mr-1.5 size-4" /> Invite Member
-            </Button>
+            <Button
+  className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+  onClick={() => setInviteOpen(true)}
+>
+  <PlusIcon className="mr-1.5 size-4" />
+  Invite Member
+</Button>
           )}
           {(activeTab === "tasks" || activeTab === "messages") && (
             <Button variant="outline" size="sm" className="border-slate-700 text-slate-300">
@@ -236,24 +277,131 @@ const healthClass =
 
       {/* Tab content rendered server-side via children pattern */}
       <GroupTabContent
-        activeTab={activeTab}
-        group={group}
-        tasks={tasks}
-        notifications={notifications}
-        messages={messages}
-        users={users}
-        currentUserRole={currentUserRole}
-        total={total}
-        pending={pending}
-        completed={completed}
-        completionRate={completionRate}
-      />
+  activeTab={activeTab}
+  group={group}
+  tasks={tasks}
+  notifications={notifications}
+  messages={messages}
+  users={users}
+  invites={invites}
+  currentUserRole={currentUserRole}
+  total={total}
+  pending={pending}
+  completed={completed}
+  completionRate={completionRate}
+/>
+
+      <Dialog
+  open={inviteOpen}
+  onOpenChange={setInviteOpen}
+>
+  <DialogContent className="border-slate-800 bg-slate-950 text-white">
+    <DialogHeader>
+      <DialogTitle>
+        Invite Member
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4">
+
+      <div>
+        <p className="mb-2 text-sm text-slate-400">
+          Phone Number
+        </p>
+
+        <Input
+          value={invitePhone}
+          onChange={(e) =>
+            setInvitePhone(e.target.value)
+          }
+          placeholder="919876543210"
+        />
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm text-slate-400">
+          Role
+        </p>
+
+        <Select
+          value={inviteRole}
+          onValueChange={setInviteRole}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="admin">
+              Admin
+            </SelectItem>
+
+            <SelectItem value="manager">
+              Manager
+            </SelectItem>
+
+            <SelectItem value="member">
+              Member
+            </SelectItem>
+
+            <SelectItem value="guest">
+              Guest
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+    <Button
+  className="w-full"
+  onClick={async () => {
+    const res = await fetch(
+      "/api/invites/send",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: invitePhone,
+          role: inviteRole,
+          groupId: group._id,
+        }),
+      }
+    )
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      toast.error(
+        data.error ||
+        "Failed to send invite"
+      )
+      return
+    }
+
+    toast.success(
+      "Invite created successfully"
+    )
+
+    setInviteOpen(false)
+    setInvitePhone("")
+    setInviteRole("member")
+  }}
+>
+  <Send className="mr-2 h-4 w-4" />
+  Send WhatsApp Invite
+</Button>
+
+    </div>
+  </DialogContent>
+</Dialog>
+
     </div>
   )
 }
 
 function GroupTabContent({
-  activeTab, group, tasks, notifications, messages, users,currentUserRole,
+  activeTab, group, tasks, notifications, messages, users,currentUserRole,invites,
   total, pending, completed, completionRate,
 }: {
   activeTab: TabId
@@ -262,11 +410,12 @@ function GroupTabContent({
   notifications: Notification[]
   messages: Message[]
   users: User[]
+  invites: Invite[]
   total: number
   pending: number
   completed: number
   completionRate: number
-  currentUserRole : string
+  currentUserRole: string
 }) {
 
   const OverviewTab = React.lazy(() => import("./tabs/overview-tab").then(m => ({ default: m.OverviewTab })))
@@ -287,6 +436,7 @@ function GroupTabContent({
   users={users}
   tasks={tasks}
   members={group.members || []}
+  invites={invites}
   groupId={group._id}
   currentUserRole={currentUserRole}
 />

@@ -7,6 +7,25 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { SearchIcon, EyeIcon, MoreHorizontalIcon } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  CheckCircle2Icon,
+  Clock3Icon,
+  SendIcon,
+  Trash2Icon,
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 
 type Task = {
   _id: string
@@ -50,6 +69,8 @@ function formatDate(dateStr?: string) {
     "\n" + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
+
+
 const PAGE_SIZE = 10
 
 export function TasksTab({ tasks }: { tasks: Task[] }) {
@@ -59,6 +80,93 @@ export function TasksTab({ tasks }: { tasks: Task[] }) {
   const [assigneeFilter, setAssigneeFilter] = React.useState("All")
   const [page, setPage] = React.useState(1)
 
+  const [selectedTask, setSelectedTask] =
+  React.useState<Task | null>(null)
+
+const [loadingAction, setLoadingAction] =
+  React.useState(false)
+
+  async function confirmCompleted(taskId: string) {
+  setLoadingAction(true)
+
+  try {
+    const res = await fetch(
+      "/api/tasks/update-status",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId,
+          status: "completed",
+        }),
+      }
+    )
+
+    if (res.ok) {
+      toast.success("Task completed")
+      window.location.reload()
+    }
+  } finally {
+    setLoadingAction(false)
+  }
+}
+
+async function resendReminder(
+  taskId: string
+) {
+  setLoadingAction(true)
+
+  try {
+    const res = await fetch(
+      "/api/tasks/resend",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId,
+        }),
+      }
+    )
+
+    if (res.ok) {
+      toast.success("Reminder sent")
+    }
+  } finally {
+    setLoadingAction(false)
+  }
+}
+
+async function deleteTask(
+  taskId: string
+) {
+  setLoadingAction(true)
+
+  try {
+    const res = await fetch(
+      "/api/tasks/delete",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId,
+        }),
+      }
+    )
+
+    if (res.ok) {
+      toast.success("Task deleted")
+      window.location.reload()
+    }
+  } finally {
+    setLoadingAction(false)
+  }
+}
   const assignees = React.useMemo(() => {
     const s = new Set(tasks.map(t => t.assignedTo).filter(Boolean))
     return ["All", ...Array.from(s)] as string[]
@@ -79,6 +187,7 @@ export function TasksTab({ tasks }: { tasks: Task[] }) {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
+    <>
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -163,9 +272,14 @@ export function TasksTab({ tasks }: { tasks: Task[] }) {
                 </TableCell>
                 <TableCell className="pr-5 py-4">
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                      <EyeIcon className="size-4" />
-                    </Button>
+                    <Button
+ size="sm"
+ variant="ghost"
+ className="size-8 p-0 text-slate-400 hover:text-white"
+ onClick={() => setSelectedTask(task)}
+>
+  <EyeIcon className="size-4" />
+</Button>
                     <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
                       <MoreHorizontalIcon className="size-4" />
                     </Button>
@@ -199,5 +313,104 @@ export function TasksTab({ tasks }: { tasks: Task[] }) {
         </div>
       </div>
     </div>
+
+    <Dialog
+  open={!!selectedTask}
+  onOpenChange={() =>
+    setSelectedTask(null)
+  }
+>
+  <DialogContent className="max-w-3xl bg-slate-950 border-slate-800 text-white">
+    {selectedTask && (
+      <>
+        <DialogHeader>
+          <DialogTitle>
+            {selectedTask.taskText}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Assigned To
+            </p>
+
+            <p>
+              {selectedTask.assignedTo ||
+                "Unassigned"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Deadline
+            </p>
+
+            <p>
+              {formatDate(
+                selectedTask.deadline
+              )}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Original Message
+            </p>
+
+            <p>
+              {selectedTask.originalMessage ||
+                "No message"}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-4">
+
+            <Button
+              onClick={() =>
+                confirmCompleted(
+                  selectedTask._id
+                )
+              }
+              disabled={loadingAction}
+            >
+              <CheckCircle2Icon className="mr-2 h-4 w-4" />
+              Complete
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() =>
+                resendReminder(
+                  selectedTask._id
+                )
+              }
+              disabled={loadingAction}
+            >
+              <SendIcon className="mr-2 h-4 w-4" />
+              Resend
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteTask(
+                  selectedTask._id
+                )
+              }
+              disabled={loadingAction}
+            >
+              <Trash2Icon className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+
+          </div>
+        </div>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
+</>
   )
 }

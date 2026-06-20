@@ -6,7 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { SearchIcon, EyeIcon, MoreHorizontalIcon, FileIcon, ImageIcon, MessageCircleIcon } from "lucide-react"
+import {
+  SearchIcon,
+  MessageCircleIcon
+} from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type Message = {
   _id: string
@@ -21,9 +30,11 @@ const PAGE_SIZE = 10
 
 export function MessagesTab({ messages, messagesCount }: { messages: Message[]; messagesCount?: number }) {
   const [search, setSearch] = React.useState("")
-  const [typeFilter, setTypeFilter] = React.useState("All")
   const [fromFilter, setFromFilter] = React.useState("All")
+  const [dateFilter, setDateFilter] = React.useState("")
   const [page, setPage] = React.useState(1)
+  const [selectedMessage, setSelectedMessage] =
+  React.useState<Message | null>(null)
 
   const senders = React.useMemo(() => {
     const s = new Set(messages.map(m => m.sender).filter(Boolean))
@@ -34,10 +45,26 @@ export function MessagesTab({ messages, messagesCount }: { messages: Message[]; 
     const q = search.trim().toLowerCase()
     return messages.filter(m => {
       const matchSearch = !q || (m.text || "").toLowerCase().includes(q) || (m.sender || "").toLowerCase().includes(q)
-      const matchFrom = fromFilter === "All" || m.sender === fromFilter
-      return matchSearch && matchFrom
+      const matchFrom =
+  fromFilter === "All" ||
+  m.sender === fromFilter
+
+const matchDate =
+  !dateFilter ||
+  (
+    m.timestamp &&
+    new Date(m.timestamp)
+      .toISOString()
+      .slice(0, 10) === dateFilter
+  )
+
+return (
+  matchSearch &&
+  matchFrom &&
+  matchDate
+)
     })
-  }, [messages, search, typeFilter, fromFilter])
+  }, [messages, search, fromFilter, dateFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -65,24 +92,19 @@ export function MessagesTab({ messages, messagesCount }: { messages: Message[]; 
             className="h-9 pl-9 border-slate-700 bg-slate-900/50 text-sm text-white placeholder:text-slate-500" />
         </div>
 
-        <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1) }}
-          className="h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-300 focus:outline-none">
-          <option value="All">Type: All</option>
-          <option value="Text">Text</option>
-          <option value="Image">Image</option>
-          <option value="Document">Document</option>
-        </select>
-
         <select value={fromFilter} onChange={e => { setFromFilter(e.target.value); setPage(1) }}
           className="h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-300 focus:outline-none">
           {senders.map(s => <option key={s} value={s}>{s === "All" ? "From: All" : s}</option>)}
         </select>
-
-        <input type="date" className="h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-300 focus:outline-none" />
-
-        <div className="ml-auto">
-          <Button variant="outline" size="sm" className="h-9 border-slate-700 text-slate-400">Filter</Button>
-        </div>
+<input
+  type="date"
+  value={dateFilter}
+  onChange={(e) => {
+    setDateFilter(e.target.value)
+    setPage(1)
+  }}
+  className="h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-300 focus:outline-none"
+/>
       </div>
 
       {/* Table */}
@@ -95,12 +117,15 @@ export function MessagesTab({ messages, messagesCount }: { messages: Message[]; 
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Type</TableHead>
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Time</TableHead>
               <TableHead className="text-[11px] uppercase tracking-widest text-slate-400">Status</TableHead>
-              <TableHead className="text-[11px] uppercase tracking-widest text-slate-400 pr-5">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length > 0 ? paginated.map((msg) => (
-              <TableRow key={msg._id} className="border-slate-800 hover:bg-slate-900/40">
+              <TableRow
+  key={msg._id}
+  className="border-slate-800 hover:bg-slate-900/40 cursor-pointer"
+  onClick={() => setSelectedMessage(msg)}
+>
                 <TableCell className="pl-5 py-4 text-sm text-slate-200 max-w-[260px] truncate">
                   {msg.text || "—"}
                 </TableCell>
@@ -125,16 +150,6 @@ export function MessagesTab({ messages, messagesCount }: { messages: Message[]; 
                   <Badge variant="outline" className="border-emerald-400/30 bg-emerald-500/10 text-emerald-300 text-[11px]">
                     Processed
                   </Badge>
-                </TableCell>
-                <TableCell className="pr-5 py-4">
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                      <EyeIcon className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="size-8 p-0 text-slate-400 hover:text-white">
-                      <MoreHorizontalIcon className="size-4" />
-                    </Button>
-                  </div>
                 </TableCell>
               </TableRow>
             )) : (
@@ -163,6 +178,80 @@ export function MessagesTab({ messages, messagesCount }: { messages: Message[]; 
             disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>›</Button>
         </div>
       </div>
+      <Dialog
+  open={!!selectedMessage}
+  onOpenChange={() =>
+    setSelectedMessage(null)
+  }
+>
+  <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-white">
+    {selectedMessage && (
+      <>
+        <DialogHeader>
+          <DialogTitle>
+            Message Details
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Sender
+            </p>
+            <p>
+              {selectedMessage.sender}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Time
+            </p>
+            <p>
+              {selectedMessage.timestamp
+                ? new Date(
+                    selectedMessage.timestamp
+                  ).toLocaleString()
+                : "—"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Type
+            </p>
+            <p>
+              {getTypeLabel(
+                selectedMessage
+              )}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-500">
+              Full Message
+            </p>
+
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+              {selectedMessage.text}
+            </div>
+          </div>
+
+          <div>
+            <Badge
+              variant="outline"
+              className="border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+            >
+              Processed
+            </Badge>
+          </div>
+
+        </div>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
     </div>
   )
 }

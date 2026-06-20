@@ -24,7 +24,7 @@ import {
   BellIcon,
   Settings2Icon,
   MessageCircleIcon,
-  
+  ActivityIcon,
 } from "lucide-react"
 
 const data = {
@@ -54,6 +54,12 @@ const data = {
       icon: <BellIcon />,
       items: [],
     },
+    {
+    title: "Activity",
+    url: "/activity",
+    icon: <ActivityIcon />,
+    items: [],
+},
     {
       title: "Settings",
       url: "/settings",

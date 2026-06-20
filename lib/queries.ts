@@ -468,3 +468,26 @@ export async function updateUserRole(userId: string, role: string) {
     .set({ role })
     .commit()
 }
+
+export async function getActivity(
+  organisationId: string
+) {
+  return await sanityClient.fetch(
+    `*[
+      _type == "activity" &&
+      organisation._ref == $orgId
+    ]
+    | order(createdAt desc)[0...100]{
+      _id,
+      type,
+      title,
+      description,
+      createdAt,
+      "groupName": group->name,
+      "taskText": task->taskText
+    }`,
+    {
+      orgId: organisationId,
+    }
+  )
+}

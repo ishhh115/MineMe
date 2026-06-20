@@ -1220,10 +1220,23 @@ if (duplicateTask) {
   })
 }
 
-let calculatedUrgency =
-  analysis.urgency || "low"
+let calculatedUrgency: "high" | "medium" | "low" = "low"
 
-  console.log("GPT URGENCY:", analysis.urgency)
+if (deadlineISO) {
+  const hoursRemaining =
+    (new Date(deadlineISO).getTime() - Date.now()) /
+    (1000 * 60 * 60)
+
+  if (hoursRemaining <= 24) {
+    calculatedUrgency = "high"
+  } else if (hoursRemaining <= 72) {
+    calculatedUrgency = "medium"
+  } else {
+    calculatedUrgency = "low"
+  }
+}
+
+console.log("GPT URGENCY:", analysis.urgency)
 console.log("FINAL URGENCY:", calculatedUrgency)
 
 let reminderAt = null
@@ -1235,21 +1248,16 @@ if (deadlineISO) {
     reminderAt = new Date(
       deadlineDate.getTime() - 2 * 60 * 60 * 1000
     ).toISOString()
-  }
-
-  else if (calculatedUrgency === "medium") {
+  } else if (calculatedUrgency === "medium") {
     reminderAt = new Date(
-      deadlineDate.getTime() - 6 * 60 * 60 * 1000
+      deadlineDate.getTime() - 12 * 60 * 60 * 1000
+    ).toISOString()
+  } else {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 24 * 60 * 60 * 1000
     ).toISOString()
   }
-
-  else {
-    reminderAt = new Date(
-      deadlineDate.getTime() - 10 * 60 * 60 * 1000
-    ).toISOString()
-  }
-}
-else {
+} else {
   reminderAt = new Date(
     Date.now() + 2 * 60 * 60 * 1000
   ).toISOString()

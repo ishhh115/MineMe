@@ -1,40 +1,86 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { SearchIcon } from "lucide-react"
 
-export default function NotificationsClient({ notifications }: { notifications: any[] }) {
+export default function NotificationsClient({
+  notifications,
+}: {
+  notifications: any[]
+}) {
   const [search, setSearch] = React.useState("")
+
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase()
-    return (notifications || []).filter((n) => !q || (n.message || '').toLowerCase().includes(q) || (n.recipient || '').toLowerCase().includes(q))
+
+    return (notifications || []).filter(
+      (n) =>
+        !q ||
+        (n.taskText || "").toLowerCase().includes(q) ||
+        (n.groupName || "").toLowerCase().includes(q)
+    )
   }, [notifications, search])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="flex items-center gap-3 mb-4">
-        <SearchIcon className="size-4 text-slate-400" />
-        <Input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search notifications" />
-        <Button variant="outline">Filters</Button>
+    <div className="w-full px-6 py-6">
+      <div className="mb-6 max-w-md">
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search notifications"
+            className="pl-10"
+          />
+        </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {filtered.map((n) => (
-          <Card key={n._id} className="p-3">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold">{n.taskText || n.message}</CardTitle>
-              <Badge variant="outline">{n.channel || n.channel?.toUpperCase?.() || 'WH'}</Badge>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-slate-400">To: {n.recipient || n.recipientName || n.recipient}</p>
-              <p className="mt-2 text-sm text-slate-100">{n.message}</p>
+          <Card key={n._id}>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <h3 className="font-semibold text-base">
+                  {n.taskText}
+                </h3>
+
+                <Badge
+                  variant="outline"
+                  className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                >
+                  Delivered
+                </Badge>
+              </div>
+
+              <p className="mt-3 text-sm text-muted-foreground">
+                Group: {n.groupName || "Unknown Group"}
+              </p>
+
+              <p className="mt-4 text-xs text-muted-foreground">
+                {new Date(
+                  n.sentAt || n.createdAt
+                ).toLocaleString([], {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </p>
             </CardContent>
           </Card>
         ))}
+
+        {filtered.length === 0 && (
+          <Card className="md:col-span-2">
+            <CardContent className="p-10 text-center">
+              <p className="text-muted-foreground">
+                No notifications found
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

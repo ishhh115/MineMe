@@ -160,7 +160,8 @@ export async function getGroups(organisationId: string) {
 // Get all notifications
 export async function getNotifications(organisationId: string) {
   const notifications = await sanityClient.fetch(
-    `*[_type == "notification" && organisation._ref == $orgId] | order(createdAt desc) {
+    `*[_type == "notification" && organisation._ref == $orgId]
+    | order(createdAt desc) {
       _id,
       channel,
       status,
@@ -173,11 +174,15 @@ export async function getNotifications(organisationId: string) {
       retryCount,
       nextReminderAt,
       createdAt,
+
       "taskText": task->taskText,
-      "taskUrgency": task->urgency
+      "taskUrgency": task->urgency,
+
+      "groupName": task->group->name
     }`,
     { orgId: organisationId }
   )
+
   return notifications
 }
 

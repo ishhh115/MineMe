@@ -196,6 +196,8 @@ export async function updateTaskStatus(
   console.log("NEW STATUS:", status)
   console.log("SNOOZE UNTIL:", snoozeUntil)
 
+  const task = await sanityClient.getDocument(taskId)
+
   const result = await sanityClient
     .patch(taskId)
     .set({
@@ -210,6 +212,28 @@ export async function updateTaskStatus(
       }),
     })
     .commit()
+
+  if (task && status === "completed") {
+    await sanityClient.create({
+      _type: "activity",
+      organisation: task.organisation,
+      type: "task_completed",
+      title: "Task Completed",
+      description: task.taskText,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  if (task && status === "snoozed") {
+    await sanityClient.create({
+      _type: "activity",
+      organisation: task.organisation,
+      type: "task_snoozed",
+      title: "Task Snoozed",
+      description: task.taskText,
+      createdAt: new Date().toISOString(),
+    })
+  }
 
   console.log("PATCH RESULT:", result)
 
@@ -280,6 +304,18 @@ export async function resendReminder(taskId: string) {
         retryCount: 0,
         createdAt: new Date().toISOString(),
       })
+
+      await sanityClient.create({
+  _type: "activity",
+  organisation: {
+    _type: "reference",
+    _ref: task.organisation._id,
+  },
+  type: "reminder_sent",
+  title: "Reminder Sent",
+  description: task.taskText,
+  createdAt: new Date().toISOString(),
+})
     }
   }
 
@@ -329,26 +365,79 @@ export async function resendReminder(taskId: string) {
 }
 
 // Edit a task's deadline
-export async function editTaskDeadline(taskId: string, newDeadline: string) {
-  return await sanityClient
-    .patch(taskId)
-    .set({ deadline: newDeadline })
-    .commit()
-}
+export async function editTaskDeadline(
+  taskId: string,
+  newDeadline: string
+) {
+  const task = await sanityClient.getDocument(taskId)
 
-// Reassign a task to a different user/assignee
-export async function reassignTask(taskId: string, assignee: string) {
-  return await sanityClient
+  const result = await sanityClient
     .patch(taskId)
-    .set({ assignedTo: assignee })
+    .set({
+      deadline: newDeadline,
+    })
     .commit()
+
+  if (task) {
+    await sanityClient.create({
+      _type: "activity",
+      organisation: task.organisation,
+      type: "deadline_updated",
+      title: "Deadline Updated",
+      description: task.taskText,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return result
+}
+// Reassign a task to a different user/assignee
+export async function reassignTask(
+  taskId: string,
+  assignee: string
+) {
+  const task = await sanityClient.getDocument(taskId)
+
+  const result = await sanityClient
+    .patch(taskId)
+    .set({
+      assignedTo: assignee,
+    })
+    .commit()
+
+  if (task) {
+    await sanityClient.create({
+      _type: "activity",
+      organisation: task.organisation,
+      type: "task_reassigned",
+      title: "Task Reassigned",
+      description: `${task.taskText} → ${assignee}`,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return result
 }
 
 // Delete a task
 export async function deleteTask(taskId: string) {
+
+  const refs = await sanityClient.fetch(
+    `*[references($taskId)]{
+      _id,
+      _type
+    }`,
+    { taskId }
+  )
+
+  console.log("TASK REFERENCES:", refs)
+
+  for (const ref of refs) {
+    await sanityClient.delete(ref._id)
+  }
+
   return await sanityClient.delete(taskId)
 }
-
 // Get users for an organisation
 export async function getUsers(organisationId: string, q?: string) {
   if (q && q.trim().length > 0) {
@@ -414,23 +503,37 @@ export async function importWhatsappGroup(
   )
 
   if (existing) {
-  return await sanityClient
+  const result = await sanityClient
     .patch(existing._id)
     .set({
       participants: group.participants_count || 0,
-
       members:
-  group.participants?.map((member) => ({
-    name: member.id,
-    phone: member.id,
-    initials: member.id.slice(-2),
-    whatsappRole: member.rank || "member",
-  })) || [],
+        group.participants?.map((member) => ({
+          name: member.id,
+          phone: member.id,
+          initials: member.id.slice(-2),
+          whatsappRole: member.rank || "member",
+        })) || [],
     })
     .commit()
+
+  await sanityClient.create({
+    _type: "activity",
+    organisation: {
+      _type: "reference",
+      _ref: organisationId,
+    },
+    type: "group_updated",
+    title: "Group Updated",
+    description: group.name,
+    createdAt: new Date().toISOString(),
+  })
+
+  return result
 }
 
-  return await sanityClient.create({
+
+  const createdGroup = await sanityClient.create({
     _type: "group",
 
     organisation: {
@@ -460,6 +563,20 @@ export async function importWhatsappGroup(
 
     createdAt: new Date().toISOString(),
   })
+
+  await sanityClient.create({
+  _type: "activity",
+  organisation: {
+    _type: "reference",
+    _ref: organisationId,
+  },
+  type: "group_imported",
+  title: "Group Imported",
+  description: group.name,
+  createdAt: new Date().toISOString(),
+})
+
+return createdGroup
 }
 
 export async function updateUserRole(userId: string, role: string) {

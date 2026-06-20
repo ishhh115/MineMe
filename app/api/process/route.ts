@@ -1274,6 +1274,7 @@ console.log("REMINDER AT:", reminderAt)
 
 console.log("PROCESS ORG:", organisationId)
 const task = await sanityClient.create({
+  
   _type: "task",
   organisation: { _type: "reference", _ref: organisationId },
   group: { _type: "reference", _ref: groupId },
@@ -1308,6 +1309,35 @@ console.log("GROUP ID USED FOR COUNTER:", groupId)
 .setIfMissing({ tasksExtracted: 0 })
 .inc({ tasksExtracted: 1 })
 .commit()
+
+await sanityClient.create({
+  _type: "activity",
+
+  organisation: {
+    _type: "reference",
+    _ref: organisationId,
+  },
+
+  type: "task_created",
+
+  title: "Task Extracted",
+
+  description: `${analysis.taskText} assigned to ${
+    resolvedAssignee || "Unassigned"
+  }`,
+
+  group: {
+    _type: "reference",
+    _ref: groupId,
+  },
+
+  task: {
+    _type: "reference",
+    _ref: task._id,
+  },
+
+  createdAt: new Date().toISOString(),
+})
 
     return NextResponse.json({
       isTask: true,

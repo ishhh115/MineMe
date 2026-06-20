@@ -422,6 +422,15 @@ export async function reassignTask(
 // Delete a task
 export async function deleteTask(taskId: string) {
 
+  const task = await sanityClient.fetch(
+    `*[_type == "task" && _id == $taskId][0]{
+      _id,
+      taskText,
+      organisation
+    }`,
+    { taskId }
+  )
+
   const refs = await sanityClient.fetch(
     `*[references($taskId)]{
       _id,
@@ -436,7 +445,25 @@ export async function deleteTask(taskId: string) {
     await sanityClient.delete(ref._id)
   }
 
-  return await sanityClient.delete(taskId)
+  await sanityClient.delete(taskId)
+
+  if (task) {
+    await sanityClient.create({
+      _type: "activity",
+
+      organisation: task.organisation,
+
+      type: "task_deleted",
+
+      title: "Task Deleted",
+
+      description: task.taskText,
+
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return { success: true }
 }
 // Get users for an organisation
 export async function getUsers(organisationId: string, q?: string) {

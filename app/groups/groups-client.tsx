@@ -523,13 +523,6 @@ const filteredGroups = React.useMemo(() => {
       </Link>
     </DropdownMenuItem>
 
-    <DropdownMenuItem
-      onClick={() => {
-        console.log("SYNC", group._id)
-      }}
-    >
-      Sync Group
-    </DropdownMenuItem>
 
     <DropdownMenuItem
   onClick={() =>
@@ -559,10 +552,30 @@ const filteredGroups = React.useMemo(() => {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-16 text-center text-slate-400">
-                    No groups found
-                  </TableCell>
-                </TableRow>
+  <TableCell colSpan={9} className="py-16">
+    <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-slate-800">
+        <UsersIcon className="size-5 text-slate-500" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-white">No groups connected yet</p>
+        <p className="mt-1 text-xs text-slate-500 max-w-xs">
+          Add the MindMe bot to your WhatsApp group, then import it here to start monitoring.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 text-left w-64">
+        {["Add the MindMe bot number to your WhatsApp group", "Click \"Add Group\" above", "Select your group and click Import"].map((step, i) => (
+          <div key={i} className="flex items-start gap-2.5">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[11px] font-bold text-emerald-400">
+              {i + 1}
+            </span>
+            <p className="text-xs text-slate-400">{step}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </TableCell>
+</TableRow>
               )}
             </TableBody>
           </Table>

@@ -43,24 +43,28 @@ export async function POST(request: Request) {
     const orgName = `${name}'s Organisation`
     const orgSlug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "-")
 
-    const newOrg = await sanityClient.create({
-      _type: "organisation",
-      name: orgName,
-      slug: {
-        _type: "slug",
-        current: `${orgSlug}-${Date.now()}`,
-      },
-      plan: "free",
-      responseRate: 0,
-      totalMessagesSent: 0,
-      totalRemindersDelivered: 0,
-      notificationPreferences: {
-        whatsapp: true,
-        email: false,
-        urgentOnly: false,
-      },
-      createdAt: new Date().toISOString(),
-    })
+    const inviteCode = "MINDME-" + Math.random().toString(36).substring(2, 8).toUpperCase()
+
+const newOrg = await sanityClient.create({
+  _type: "organisation",
+  name: orgName,
+  slug: {
+    _type: "slug",
+    current: `${orgSlug}-${Date.now()}`,
+  },
+  plan: "free",
+  inviteCode,
+  botPhoneNumber: process.env.WHAPI_BOT_NUMBER || "",
+  responseRate: 0,
+  totalMessagesSent: 0,
+  totalRemindersDelivered: 0,
+  notificationPreferences: {
+    whatsapp: true,
+    email: false,
+    urgentOnly: false,
+  },
+  createdAt: new Date().toISOString(),
+})
 
     const newUser = await sanityClient.create({
       _type: "user",

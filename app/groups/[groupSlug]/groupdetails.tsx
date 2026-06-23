@@ -223,15 +223,15 @@ const healthClass =
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {activeTab === "members" && (
-            <Button
-  className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
-  onClick={() => setInviteOpen(true)}
->
-  <PlusIcon className="mr-1.5 size-4" />
-  Invite Member
-</Button>
-          )}
+          {(activeTab === "members" || activeTab === "access") && (
+  <Button
+    className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+    onClick={() => setInviteOpen(true)}
+  >
+    <PlusIcon className="mr-1.5 size-4" />
+    Invite Member
+  </Button>
+)}
          {/*} {activeTab === "overview" && (
             <>
               <Button variant="outline" size="sm" className="border-slate-700 text-slate-300">

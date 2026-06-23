@@ -7,15 +7,17 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import {
-  SearchIcon,
-  MessageCircleIcon
-} from "lucide-react"
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  SearchIcon,
+  MessageCircleIcon,
+  ImageIcon,
+  FileIcon,
+} from "lucide-react"
 
 type Message = {
   _id: string

@@ -8,8 +8,11 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    const organisationId =
-      (session?.user as { organisationId?: string })?.organisationId
+const organisationId =
+  (session?.user as { organisationId?: string })?.organisationId
+
+const adminPhone =
+  (session?.user as { phone?: string })?.phone
 
     if (!organisationId) {
       return NextResponse.json(
@@ -28,9 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const importedGroup = await importWhatsappGroup(
-      group,
-      organisationId
-    )
+  group,
+  organisationId,
+  adminPhone
+)
 
     return NextResponse.json({
       success: true,

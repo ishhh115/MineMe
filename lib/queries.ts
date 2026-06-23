@@ -520,7 +520,8 @@ export async function importWhatsappGroup(
       rank: string
     }>
   },
-  organisationId: string
+  organisationId: string,
+  adminPhone?: string
 ) {
   const existing = await sanityClient.fetch(
     `*[_type == "group" && chatId == $chatId][0]`,
@@ -533,6 +534,10 @@ export async function importWhatsappGroup(
   const result = await sanityClient
     .patch(existing._id)
     .set({
+      organisation: {
+        _type: "reference",
+        _ref: organisationId,
+      },
       participants: group.participants_count || 0,
       members:
         group.participants?.map((member) => ({
@@ -562,32 +567,27 @@ export async function importWhatsappGroup(
 
   const createdGroup = await sanityClient.create({
     _type: "group",
-
     organisation: {
       _type: "reference",
       _ref: organisationId,
     },
-
     chatId: group.id,
     name: group.name,
-
     participants: group.participants_count || 0,
-
-    members:
-  group.participants?.map((member) => ({
-    name: member.id,
-    phone: member.id,
-    initials: member.id.slice(-2),
-    whatsappRole: member.rank || "member",
-  })) || [],
-
+    members: group.participants?.map((member) => ({
+      name: member.id,
+      phone: member.id,
+      initials: member.id.slice(-2),
+      whatsappRole: member.rank || "member",
+    })) || [],
     isMonitoring: true,
-
     messagesCount: 0,
     tasksExtracted: 0,
     completedTasksCount: 0,
     completionPercentage: 0,
-
+    claimedAt: new Date().toISOString(),
+    claimedBy: organisationId,
+    claimedByPhone: adminPhone || "",
     createdAt: new Date().toISOString(),
   })
 

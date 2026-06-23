@@ -141,6 +141,16 @@ export const group = {
       type: "datetime",
     },
     {
+  name: "claimedAt",
+  title: "Claimed At",
+  type: "datetime",
+},
+{
+  name: "claimedByPhone",
+  title: "Claimed By Phone",
+  type: "string",
+},
+    {
       name: "createdAt",
       title: "Created At",
       type: "datetime",

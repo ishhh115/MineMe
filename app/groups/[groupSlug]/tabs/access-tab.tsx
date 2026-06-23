@@ -45,10 +45,6 @@ export function AccessTab({
             Invite users and manage group permissions.
           </p>
         </div>
-
-        <Button>
-          Invite Member
-        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

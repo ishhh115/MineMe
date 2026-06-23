@@ -112,18 +112,17 @@ setTimeout(() => {
 
   try {
     const res = await fetch(
-      "/api/groups/monitoring",
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          groupId: group._id,
-          isMonitoring: !group.isMonitoring,
-        }),
-      }
-    )
+  `/api/groups/${group._id}/monitoring`,
+  {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      isMonitoring: !group.isMonitoring,
+    }),
+  }
+)
 
     if (!res.ok) {
       toast.error(
@@ -147,17 +146,11 @@ setTimeout(() => {
 async function deleteGroup() {
   try {
     const res = await fetch(
-      "/api/groups/delete",
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          groupId: group._id,
-        }),
-      }
-    )
+  `/api/groups/${group._id}`,
+  {
+    method: "DELETE",
+  }
+)
 
     if (!res.ok) {
       toast.error(

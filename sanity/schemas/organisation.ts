@@ -34,6 +34,13 @@ export const organisation = {
       type: "string",
     },
     {
+  name: "inviteCode",
+  title: "Invite Code",
+  type: "string",
+  description: "Unique code for claiming WhatsApp groups. Send /connect <code> in a WhatsApp group to link it.",
+  validation: (rule: Rule) => rule.required(),
+},
+    {
       name: "plan",
       title: "Plan",
       type: "string",

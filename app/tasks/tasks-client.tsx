@@ -464,7 +464,7 @@ async function confirmCompleted(taskId: string) {
                         <p className="text-sm font-semibold text-white">{task.taskText}</p>
                         <Badge variant="outline" className="text-[10px]">{task.source==='manual'? 'Manual':'Auto Extracted'}</Badge>
                       </div>
-                      <p className="text-xs text-slate-400">Extracted {task.createdAt ? new Date(task.createdAt).toLocaleString() : '—'} • From {task.groupName || '—'}</p>
+                      <p className="text-xs text-slate-400">Extracted {task.createdAt ? new Date(task.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + ", " + new Date(task.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : '—'} • From {task.groupName || '—'}</p>
                     </div>
                   </TableCell>
                   <TableCell className="py-4"><div className="flex items-center gap-2"><div className="rounded-full w-7 h-7 bg-slate-800 flex items-center justify-center text-xs">{(task.assignedTo||'U').slice(0,1)}</div><span className="text-sm">{task.assignedTo || '—'}</span></div></TableCell>

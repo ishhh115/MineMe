@@ -70,11 +70,16 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/login",
+    error: "/login",
     newUser: "/onboarding",
   },
 
   callbacks: {
     async signIn({ user, account }: any) {
+  const allowedRoles = ["admin", "manager"]
+  if (user?.role && !allowedRoles.includes(user.role)) {
+    return false
+  }
      /* if (account?.provider === "google") {
         try {
           const existing = await sanityClient.fetch(

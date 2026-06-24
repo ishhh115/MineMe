@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 function ResetPasswordForm() {
   const searchParams = useSearchParams()
 
-  const [email, setEmail] = useState(searchParams.get("email") || "")
+  const [identifier, setIdentifier] =
+  useState(searchParams.get("identifier") || "")
   const [code, setCode] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -39,7 +40,11 @@ function ResetPasswordForm() {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code, password }),
+        body: JSON.stringify({
+  identifier,
+  code,
+  password,
+}),
       })
 
       const data = await response.json()
@@ -66,23 +71,27 @@ function ResetPasswordForm() {
           <CardHeader>
             <CardTitle>Reset your password</CardTitle>
             <CardDescription>
-              Enter the code from your email and set a new password.
+              Enter the code you received via email or WhatsApp and set a new password.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="email">Email</FieldLabel>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                  />
-                </Field>
+  <FieldLabel htmlFor="identifier">
+    Email or WhatsApp Number
+  </FieldLabel>
+
+  <Input
+    id="identifier"
+    value={identifier}
+    onChange={(e) =>
+      setIdentifier(e.target.value)
+    }
+    placeholder="you@example.com or +919121834024"
+    required
+  />
+</Field>
 
                 <Field>
                   <FieldLabel htmlFor="code">Reset code</FieldLabel>
@@ -97,7 +106,7 @@ function ResetPasswordForm() {
                     required
                   />
                   <FieldDescription>
-                    Use the 6-digit code from your reset email.
+                    Use the 6-digit code sent to your email or WhatsApp.
                   </FieldDescription>
                 </Field>
 

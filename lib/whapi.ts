@@ -9,6 +9,10 @@
     options?: { token?: string; baseUrl?: string }
   ) {
     const token = options?.token || WHAPI_TOKEN
+    console.log(
+  "USING TOKEN:",
+  token?.slice(0, 15)
+)
     const baseUrl = options?.baseUrl || WHAPI_URL
 
     if (!token) {
@@ -87,6 +91,16 @@
   )
 
   const data = await response.json()
+
+  console.log(
+  "WHAPI STATUS:",
+  response.status
+)
+
+console.log(
+  "WHAPI RESPONSE:",
+  JSON.stringify(data, null, 2)
+)
 
   if (!response.ok) {
     console.error("Interactive message error:", data)

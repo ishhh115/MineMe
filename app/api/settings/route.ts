@@ -38,7 +38,10 @@ export async function PATCH(request: Request) {
     if (!orgId) {
       return NextResponse.json({ message: "No organisation ID found" }, { status: 400 })
     }
-
+    if (currentUserRole !== "admin") {
+      return NextResponse.json({ message: "Only admins can change settings" }, { status: 403 })
+    }
+w
     const body = await request.json()
     const { whapiToken, botPhoneNumber, webhookUrl, notificationPreferences, groups } = body as {
       whapiToken?: string

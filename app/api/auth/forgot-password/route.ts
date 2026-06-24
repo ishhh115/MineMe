@@ -3,64 +3,123 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { sanityClient } from "@/lib/sanity"
 import { passwordResetTemplate, sendEmail } from "@/lib/email"
+import { sendWhatsAppMessage } from "@/lib/whapi"
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json()
+    const { email, phone } = await request.json()
 
-    if (!email) {
-      return NextResponse.json({ message: "Email is required" }, { status: 400 })
+    if (!email && !phone) {
+      return NextResponse.json(
+        { message: "Email or phone number is required" },
+        { status: 400 }
+      )
     }
 
+    const identifier = email || phone
+
+    // Fetch user AND their organisation's whapiToken
     const user = await sanityClient.fetch(
-      `*[_type == "user" && email == $email][0]{ _id, name, email, isVerified }`,
-      { email }
+      `*[
+        _type == "user" &&
+        (email == $identifier || phone == $identifier)
+      ][0]{
+        _id,
+        name,
+        email,
+        phone,
+        isVerified,
+        "whapiToken": organisation->whapiToken
+      }`,
+      { identifier }
     )
 
     if (!user) {
-      // Return success even if user not found for security
-      return NextResponse.json({ message: "If the email exists, a reset code has been sent" })
+      return NextResponse.json({
+        message: "If the account exists, a reset code has been sent",
+      })
     }
 
     const resetCode = randomInt(0, 1000000).toString().padStart(6, "0")
     const resetPasswordCodeHash = await bcrypt.hash(resetCode, 12)
-    const resetPasswordCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    const resetPasswordCodeExpiresAt = new Date(
+      Date.now() + 15 * 60 * 1000
+    ).toISOString()
 
     await sanityClient
       .patch(user._id)
       .set({ resetPasswordCodeHash, resetPasswordCodeExpiresAt })
       .commit()
 
-    const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?email=${encodeURIComponent(email)}`
+    if (email) {
+      const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?identifier=${encodeURIComponent(email)}`
 
-    const emailResult = await sendEmail({
-      to: email,
-      subject: "Reset your MindMe password",
-      htmlBody: passwordResetTemplate({
-        name: user.name || "there",
-        resetCode,
-        resetLink,
-      }),
-    })
+      const emailResult = await sendEmail({
+        to: email,
+        subject: "Reset your MindMe password",
+        htmlBody: passwordResetTemplate({
+          name: user.name || "there",
+          resetCode,
+          resetLink,
+        }),
+      })
 
-    // Log reset code locally when email fails
-    if (!emailResult.success) {
-      console.log("====================================")
-      console.log("EMAIL NOT SENT — LOCAL DEVELOPMENT")
-      console.log(`Password reset code for ${email}: ${resetCode}`)
-      console.log(`Reset link: ${resetLink}`)
-      console.log("====================================")
+      if (!emailResult.success) {
+        console.log("====================================")
+        console.log("EMAIL NOT SENT — LOCAL DEVELOPMENT")
+        console.log(`Password reset code for ${email}: ${resetCode}`)
+        console.log("====================================")
+      }
     }
 
-    // Always return success regardless of email result
+    if (phone) {
+      const normalizedPhone = phone.replace(/\D/g, "")
+
+      const whatsappPhone =
+        normalizedPhone.length === 10
+          ? `91${normalizedPhone}`
+          : normalizedPhone
+
+      // Use org's whapiToken, same as reminders
+      const chatId = whatsappPhone
+
+      console.log("WHATSAPP RESET TARGET:", chatId)
+      console.log("USING ORG TOKEN:", user.whapiToken ? "yes" : "fallback to env")
+
+      const result = await sendWhatsAppMessage(
+        chatId,
+        `🔐 *MindMe Password Reset*
+
+Your reset code is:
+
+*${resetCode}*
+
+This code expires in 15 minutes.
+
+If you did not request this, please ignore this message.`,
+        { token: user.whapiToken || undefined }
+      )
+
+      console.log("WHATSAPP RESET RESULT:", result)
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("====================================")
+        console.log(`Password reset code for ${phone}: ${resetCode}`)
+        console.log("====================================")
+      }
+    }
+
     return NextResponse.json({
-      message: "If the email exists, a reset code has been sent",
-      ...(process.env.NODE_ENV === "development" && !emailResult.success
+      message: "If the account exists, a reset code has been sent",
+      ...(process.env.NODE_ENV === "development"
         ? { devResetCode: resetCode }
         : {}),
     })
   } catch (error) {
     console.error("forgot-password error", error)
-    return NextResponse.json({ message: "Something went wrong" }, { status: 500 })
+    return NextResponse.json(
+      { message: "Something went wrong" },
+      { status: 500 }
+    )
   }
 }

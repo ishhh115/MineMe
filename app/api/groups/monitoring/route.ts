@@ -32,7 +32,10 @@ export async function PATCH(
 
     const currentUser =
       users.find(
-        (u) =>
+  (u: {
+    email?: string
+    role?: string
+  }) =>
           u.email ===
           session?.user?.email
       )

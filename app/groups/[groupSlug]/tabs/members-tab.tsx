@@ -144,7 +144,7 @@ const [selectedRole, setSelectedRole] =
       }
 
     const matchedUser = users.find(
-  (u) =>
+  (u: User) =>
     u._id === member.linkedUserId
 )
 

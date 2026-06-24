@@ -6,6 +6,24 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { SearchIcon } from "lucide-react"
 
+function getStatusStyle(status?: string) {
+  switch (status) {
+    case "delivered":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+    case "failed":
+      return "border-red-500/30 bg-red-500/10 text-red-400"
+    case "pending":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-400"
+    default:
+      return "border-slate-500/30 bg-slate-500/10 text-slate-400"
+  }
+}
+
+function getStatusLabel(status?: string) {
+  if (!status) return "Unknown"
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
 export default function NotificationsClient({
   notifications,
 }: {
@@ -15,7 +33,6 @@ export default function NotificationsClient({
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase()
-
     return (notifications || []).filter(
       (n) =>
         !q ||
@@ -29,7 +46,6 @@ export default function NotificationsClient({
       <div className="mb-6 max-w-md">
         <div className="relative">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -47,12 +63,11 @@ export default function NotificationsClient({
                 <h3 className="font-semibold text-base">
                   {n.taskText}
                 </h3>
-
                 <Badge
                   variant="outline"
-                  className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  className={getStatusStyle(n.status)}
                 >
-                  Delivered
+                  {getStatusLabel(n.status)}
                 </Badge>
               </div>
 
@@ -61,11 +76,14 @@ export default function NotificationsClient({
               </p>
 
               <p className="mt-4 text-xs text-muted-foreground">
-                {new Date(
-                  n.sentAt || n.createdAt
-                ).toLocaleString([], {
-                  dateStyle: "medium",
-                  timeStyle: "short",
+                {new Date(n.sentAt || n.createdAt).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}{" "}
+                {new Date(n.sentAt || n.createdAt).toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </p>
             </CardContent>

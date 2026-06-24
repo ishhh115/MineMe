@@ -8,9 +8,15 @@ export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const organisationId = (session?.user as { organisationId?: string })?.organisationId
+    const currentUserRole = (session?.user as { role?: string })?.role
 
     if (!organisationId) {
       return NextResponse.json({ error: "No organisation found" }, { status: 401 })
+    }
+
+    // Only admins can change roles
+    if (currentUserRole !== "admin") {
+      return NextResponse.json({ error: "Only admins can change roles" }, { status: 403 })
     }
 
     const { userId, role } = await request.json()

@@ -4,9 +4,17 @@ import { sanityClient } from "@/lib/sanity"
 
 export async function POST(request: Request) {
   try {
-    const { email, code, password } = await request.json()
+    const {
+  identifier,
+  code,
+  password,
+} = await request.json()
 
-    if (!email || !code || !password) {
+    if (
+  !identifier ||
+  !code ||
+  !password
+) {
       return NextResponse.json({ message: "Email, OTP, and password are required" }, { status: 400 })
     }
 
@@ -15,9 +23,20 @@ export async function POST(request: Request) {
     }
 
     const user = await sanityClient.fetch(
-      `*[_type == "user" && email == $email][0]{ _id, resetPasswordCodeHash, resetPasswordCodeExpiresAt, isVerified }`,
-      { email }
+  `*[
+    _type == "user" &&
+    (
+      email == $identifier ||
+      phone == $identifier
     )
+  ][0]{
+    _id,
+    resetPasswordCodeHash,
+    resetPasswordCodeExpiresAt,
+    isVerified
+  }`,
+  { identifier }
+)
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,11 +22,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
 
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const authError = searchParams.get("error")
   const { executeRecaptcha } = useGoogleReCaptcha()
   const [mode, setMode] = useState<"phone" | "email">("phone")
   const [phone, setPhone] = useState("")
@@ -208,9 +211,15 @@ export function LoginForm({
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
-              {error && (
-                <p className="text-sm text-red-400 text-center">{error}</p>
-              )}
+              {authError === "AccessDenied" && (
+  <p className="text-sm text-red-400 text-center">
+    Your account does not have dashboard access. Contact your organisation admin.
+  </p>
+)}
+
+{error && (
+  <p className="text-sm text-red-400 text-center">{error}</p>
+)}
               <Field>
                 <Button type="submit" disabled={loading}>
                   {loading ? "Logging in..." : "Login"}

@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     // Send WhatsApp message to invited person
     const appUrl = process.env.NEXTAUTH_URL || "https://mindme.in"
-    const whatsappChatId = `91${normalizedPhone}@s.whatsapp.net`
+    const whatsappChatId = `91${normalizedPhone}`
 
     const message = `👋 You've been invited to join *${group.name}* on MindMe!
 

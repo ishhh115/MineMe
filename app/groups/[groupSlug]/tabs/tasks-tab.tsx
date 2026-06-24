@@ -74,7 +74,7 @@ function formatDate(dateStr?: string) {
 
 const PAGE_SIZE = 10
 
-export function TasksTab({ tasks }: { tasks: Task[] }) {
+export function TasksTab({ tasks, currentUserRole }: { tasks: Task[]; currentUserRole?: string }) {
   const [search, setSearch] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("All")
   const [priorityFilter, setPriorityFilter] = React.useState("All")
@@ -320,14 +320,15 @@ async function deleteTask(
       Resend Reminder
     </DropdownMenuItem>
 
-    <DropdownMenuItem
-      className="text-red-400"
-      onClick={() =>
-        deleteTask(task._id)
-      }
-    >
-      Delete Task
-    </DropdownMenuItem>
+    {currentUserRole === "admin" && (
+  <DropdownMenuItem
+    className="text-red-400"
+    onClick={() => deleteTask(task._id)}
+  >
+    Delete Task
+  </DropdownMenuItem>
+)}
+
   </DropdownMenuContent>
 </DropdownMenu>
                   </div>
@@ -470,18 +471,20 @@ async function deleteTask(
               Resend
             </Button>
 
-            <Button
-              variant="destructive"
-              onClick={() =>
-                deleteTask(
-                  selectedTask._id
-                )
-              }
-              disabled={loadingAction}
-            >
-              <Trash2Icon className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
+            {currentUserRole === "admin" && (
+  <Button
+    variant="destructive"
+    onClick={() =>
+      deleteTask(
+        selectedTask._id
+      )
+    }
+    disabled={loadingAction}
+  >
+    <Trash2Icon className="mr-2 h-4 w-4" />
+    Delete
+  </Button>
+)}
 
           </div>
         </div>

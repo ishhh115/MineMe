@@ -27,9 +27,20 @@ export async function GET() {
     // Normalize admin phone — strip everything except digits
     const normalizedAdminPhone = adminPhone.replace(/\D/g, "")
 
+
     // Fetch all groups from Whapi
-    const data = await getWhatsappGroups()
+const data = await getWhatsappGroups()
+
+console.log(
+  "WHAPI GROUPS FETCHED:",
+  JSON.stringify(data, null, 2)
+)
     const whapiGroups = data.groups || []
+
+    console.log(
+  "TOTAL WHAPI GROUPS:",
+  whapiGroups.length
+)
 
     if (whapiGroups.length === 0) {
       return NextResponse.json({ groups: [] })
@@ -80,9 +91,16 @@ export async function GET() {
     console.log(`Total Whapi groups: ${whapiGroups.length}`)
     console.log(`Available for this org: ${availableGroups.length}`)
 
+    console.log(
+  "GROUPS RETURNED TO UI:",
+  availableGroups.length
+)
+
     return NextResponse.json({ groups: availableGroups })
   } catch (error) {
     console.error(error)
+
+    
     return NextResponse.json(
       { error: "Failed to fetch WhatsApp groups" },
       { status: 500 }

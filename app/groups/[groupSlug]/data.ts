@@ -80,9 +80,9 @@ export async function getGroupDetailData(groupId: string) {
   { groupId }
 )
 
-    const users = await getUsers(orgId)
+    const users: User[] = await getUsers(orgId)
     const currentUser = users.find(
-  (u: User) => u.email === session?.user?.email
+  (u) => u.email === session?.user?.email
 )
     console.log("USERS FETCHED FOR GROUP DETAIL:", users)
 

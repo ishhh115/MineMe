@@ -249,7 +249,9 @@ const healthClass =
       {/* Tabs */}
       <div className="border-b border-slate-800 mb-6">
         <div className="flex gap-0">
-          {TABS.map((tab) => (
+  {TABS.filter(tab => 
+    tab.id !== "settings" || currentUserRole === "admin"
+  ).map((tab) => (
             <button
               key={tab.id}
               onClick={() => navigateTab(tab.id)}
@@ -422,14 +424,18 @@ function GroupTabContent({
       {activeTab === "overview" && (
         <OverviewTab group={group} tasks={tasks} total={total} pending={pending} completed={completed} completionRate={completionRate} />
       )}
-      {activeTab === "tasks" && <TasksTab tasks={tasks} />}
+      {activeTab === "tasks" && (
+  <TasksTab
+    tasks={tasks}
+    currentUserRole={currentUserRole}
+  />
+)}
       {activeTab === "messages" && <MessagesTab messages={messages} messagesCount={group.messagesCount} />}
       {activeTab === "members" && (
   <MembersTab
   users={users}
   tasks={tasks}
   members={group.members || []}
-  invites={invites}
   groupId={group._id}
   currentUserRole={currentUserRole}
 />

@@ -277,8 +277,27 @@ async function confirmCompleted(taskId: string) {
       const j = await res.json()
       if (j.ok) {
         toast.success("Deadline updated successfully")
-        setLocalTasks((cur) => cur.map((t) => t._id === taskId ? { ...t, deadline: iso } : t))
-        if (selectedTask?._id === taskId) setSelectedTask({ ...(selectedTask as TaskRecord), deadline: iso })
+        setLocalTasks((cur) =>
+  cur.map((t) =>
+    t._id === taskId
+      ? {
+          ...t,
+          deadline: j.result.deadline,
+          urgency: j.result.urgency,
+          reminderAt: j.result.reminderAt,
+        }
+      : t
+  )
+)
+
+if (selectedTask?._id === taskId) {
+  setSelectedTask({
+    ...(selectedTask as TaskRecord),
+    deadline: j.result.deadline,
+    urgency: j.result.urgency,
+    reminderAt: j.result.reminderAt,
+  })
+}
         setNewDeadlineLocal("")
         setShowDeadlineEdit(false)
       }

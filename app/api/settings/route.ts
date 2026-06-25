@@ -6,8 +6,16 @@ import { authOptions } from "@/lib/auth"
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    const orgId =
-      (session?.user as { organisationId?: string } | undefined)?.organisationId
+    const user = session?.user as
+  | {
+      organisationId?: string
+      role?: string
+    }
+  | undefined
+
+const orgId = user?.organisationId
+const currentUserRole = user?.role
+
 
     if (!orgId) {
       return NextResponse.json({ message: "No organisation ID found" }, { status: 400 })
@@ -32,8 +40,15 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    const orgId =
-      (session?.user as { organisationId?: string } | undefined)?.organisationId
+    const user = session?.user as
+  | {
+      organisationId?: string
+      role?: string
+    }
+  | undefined
+
+const orgId = user?.organisationId
+const currentUserRole = user?.role
 
     if (!orgId) {
       return NextResponse.json({ message: "No organisation ID found" }, { status: 400 })
@@ -41,7 +56,7 @@ export async function PATCH(request: Request) {
     if (currentUserRole !== "admin") {
       return NextResponse.json({ message: "Only admins can change settings" }, { status: 403 })
     }
-w
+
     const body = await request.json()
     const { whapiToken, botPhoneNumber, webhookUrl, notificationPreferences, groups } = body as {
       whapiToken?: string

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import GroupsClient from "./groups-client"
 import { getGroupsPageData } from "./data"
 

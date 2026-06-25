@@ -1,4 +1,4 @@
-
+export const dynamic = "force-dynamic"
 import ActivityActions from "@/components/activity-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

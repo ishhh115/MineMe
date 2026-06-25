@@ -126,6 +126,7 @@ export async function getTasks(organisationId: string) {
       originalMessage,
       confidence,
       createdAt,
+      reminderAt,
       "groupName": group->name,
       "chatId": group->chatId
     }`,
@@ -371,10 +372,44 @@ export async function editTaskDeadline(
 ) {
   const task = await sanityClient.getDocument(taskId)
 
+  let calculatedUrgency: "high" | "medium" | "low" = "low"
+
+  const hoursRemaining =
+    (new Date(newDeadline).getTime() - Date.now()) /
+    (1000 * 60 * 60)
+
+  if (hoursRemaining <= 24) {
+    calculatedUrgency = "high"
+  } else if (hoursRemaining <= 72) {
+    calculatedUrgency = "medium"
+  } else {
+    calculatedUrgency = "low"
+  }
+
+  let reminderAt: string
+
+  const deadlineDate = new Date(newDeadline)
+
+  if (calculatedUrgency === "high") {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 2 * 60 * 60 * 1000
+    ).toISOString()
+  } else if (calculatedUrgency === "medium") {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 12 * 60 * 60 * 1000
+    ).toISOString()
+  } else {
+    reminderAt = new Date(
+      deadlineDate.getTime() - 24 * 60 * 60 * 1000
+    ).toISOString()
+  }
+
   const result = await sanityClient
     .patch(taskId)
     .set({
       deadline: newDeadline,
+      urgency: calculatedUrgency,
+      reminderAt,
     })
     .commit()
 

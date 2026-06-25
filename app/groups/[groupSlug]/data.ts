@@ -44,7 +44,7 @@ export async function getGroupDetailData(groupId: string) {
 
     const tasks = await sanityClient.fetch(
       `*[_type == "task" && group._ref == $groupId] | order(createdAt desc)[0...20] {
-        _id, taskText, assignedTo, deadline, urgency, status,
+        _id, taskText, assignedTo, deadline, urgency, status,reminderAt,
         source, whatsappStatus, originalMessage, confidence, createdAt
       }`,
       { groupId }

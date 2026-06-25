@@ -148,20 +148,20 @@ const [selectedRole, setSelectedRole] =
     u._id === member.linkedUserId
 )
 
-    return {
-      ...member,
-      ...stats,
+return {
+  ...member,
+  ...stats,
 
-      whatsappRole: member.whatsappRole,
+  name: matchedUser?.name || member.name,
 
-      userId: matchedUser?._id,
-      role:
-  matchedUser?.role ||
-  member.portalRole,
-      email: matchedUser?.email,
-      isVerified: !!matchedUser,
-      createdAt: matchedUser?.createdAt,
-    }
+  whatsappRole: member.whatsappRole,
+
+  userId: matchedUser?._id,
+  role: matchedUser?.role || member.portalRole,
+  email: matchedUser?.email,
+  isVerified: !!matchedUser,
+  createdAt: matchedUser?.createdAt,
+}
   })
 }, [members, users, taskStats])
 
@@ -205,20 +205,18 @@ const [selectedRole, setSelectedRole] =
   async function linkMember() {
   if (!selectedMember || !selectedUser) return
 
-  await fetch(
-    "/api/groups/link-member",
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-      body: JSON.stringify({
-  userId: selectedUser,
-  role: selectedRole,
-}),
-    }
-  )
+  await fetch("/api/groups/link-member", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      groupId,
+      phone: selectedMember.phone,
+      userId: selectedUser,
+      role: selectedRole,
+    }),
+  })
 
   window.location.reload()
 }
@@ -297,10 +295,8 @@ async function removeAccess() {
 
       <div>
         <p className="text-sm font-medium text-white">
-          {member.userId
-            ? member.email?.split("@")[0]
-            : member.phone}
-        </p>
+  {member.name || member.phone}
+</p>
       </div>
     </div>
   </TableCell>

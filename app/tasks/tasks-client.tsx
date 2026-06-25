@@ -59,6 +59,7 @@ type TaskRecord = {
   confidence?: number | null
   createdAt?: string | null
   groupName?: string | null
+  reminderAt?: string | null
   chatId?: string | null
 }
 
@@ -71,7 +72,14 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
   const [loadingAction, setLoadingAction] = React.useState(false)
   const [newAssignee, setNewAssignee] = React.useState("")
   const [newAssigneeId, setNewAssigneeId] = React.useState<string | null>(null)
-  const [users, setUsers] = React.useState<Array<{_id:string; name:string; email?:string}>>([])
+  const [users, setUsers] = React.useState<
+Array<{
+  name: string
+  phone: string
+  linkedUserId?: string
+  portalRole?: string
+}>
+>([])
   const [userQuery, setUserQuery] = React.useState("")
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false)
   const [highlightedIndex, setHighlightedIndex] = React.useState<number>(-1)
@@ -108,29 +116,28 @@ export function TasksClient({ tasks }: { tasks: TaskRecord[] }) {
 }, [taskIdFromUrl, localTasks])
 
   // fetch users when debounced query changes
-  React.useEffect(() => {
-    let mounted = true
-    if (!debouncedUserQuery || debouncedUserQuery.length < 1) {
+React.useEffect(() => {
+  let mounted = true
+
+  if (!selectedTask?._id) return
+
+  fetch(`/api/tasks/assignees?taskId=${selectedTask._id}`)
+    .then((r) => r.json())
+    .then((data) => {
+      if (!mounted) return
+      if (Array.isArray(data)) setUsers(data)
+    })
+    .catch(() => {
+      if (!mounted) return
       setUsers([])
-      return
-    }
+    })
 
-    setUserDropdownOpen(true)
-    fetch(`/api/users/list?q=${encodeURIComponent(debouncedUserQuery)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return
-        if (Array.isArray(data)) setUsers(data)
-      })
-      .catch(() => {
-        if (!mounted) return
-        setUsers([])
-      })
+  return () => {
+    mounted = false
+  }
+}, [selectedTask?._id])
 
-    return () => {
-      mounted = false
-    }
-  }, [debouncedUserQuery])
+
   const [newDeadlineLocal, setNewDeadlineLocal] = React.useState("")
 
   React.useEffect(() => {
@@ -543,7 +550,7 @@ async function confirmCompleted(taskId: string) {
                 {/* LEFT: task details */}
                 <div className="space-y-5">
                   <div className="rounded-xl border border-slate-700 bg-slate-900/30 p-6">
-                    <div className="grid grid-cols-4 gap-6">
+                    <div className="grid grid-cols-5 gap-6">
                       <div className="flex items-center gap-3">
                         <UserIcon className="h-5 w-5 text-violet-400" />
                         <div>
@@ -558,6 +565,21 @@ async function confirmCompleted(taskId: string) {
                           <p className="text-sm font-medium">{formatDeadline(selectedTask.deadline)}</p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3 border-l border-slate-700 pl-6">
+  <Clock3Icon className="h-5 w-5 text-emerald-400" />
+
+  <div>
+    <p className="text-xs text-slate-400">
+      Reminder
+    </p>
+
+    <p className="text-sm font-medium">
+      {selectedTask.reminderAt
+        ? new Date(selectedTask.reminderAt).toLocaleString()
+        : "Not Scheduled"}
+    </p>
+  </div>
+</div>
                       <div className="flex items-center gap-3 border-l border-slate-700 pl-6">
                         <MessageCircleIcon className="h-5 w-5 text-green-400" />
                         <div>
@@ -691,7 +713,10 @@ async function confirmCompleted(taskId: string) {
                         <Button
                           variant="outline"
                           className="w-full text-sm"
-                          onClick={() => setShowAssigneeEdit(true)}
+                          onClick={() => {
+  setShowAssigneeEdit(true)
+  setUserDropdownOpen(true)
+}}
                         >
                           Change Assignee
                         </Button>
@@ -710,11 +735,6 @@ async function confirmCompleted(taskId: string) {
                                 setNewAssignee(q)
                                 setNewAssigneeId(null)
                                 setUserDropdownOpen(true)
-                                if (q.length >= 1) {
-                                  setDebouncedUserQuery(q)
-                                } else {
-                                  setUsers([])
-                                }
                               }}
                               onKeyDown={(e) => {
                                 if (!userDropdownOpen) return
@@ -729,7 +749,7 @@ async function confirmCompleted(taskId: string) {
                                   const u = users[highlightedIndex]
                                   if (u) {
                                     setNewAssignee(u.name)
-                                    setNewAssigneeId(u._id)
+                                    setNewAssigneeId(u.phone)
                                     setUserQuery("")
                                     setUserDropdownOpen(false)
                                   }
@@ -740,24 +760,42 @@ async function confirmCompleted(taskId: string) {
                               placeholder="Search users..."
                             />
                             {userDropdownOpen && users.length > 0 && (
-                              <div role="listbox" id="assignee-listbox" aria-label="Assignee suggestions" className="absolute z-50 mt-1 w-full rounded-md border bg-slate-900/95">
-                                {users.filter(u => (u.name||u.email||u._id).toLowerCase().includes((userQuery||newAssignee).toLowerCase())).slice(0,8).map((u, idx) => (
-                                  <div
-                                    key={u._id}
+  <div
+    role="listbox"
+    id="assignee-listbox"
+    aria-label="Assignee suggestions"
+    className="absolute z-50 mt-1 w-full rounded-md border bg-slate-900/95"
+  >
+    {users
+      .filter((u) =>
+        (u.name || u.phone)
+          .toLowerCase()
+          .includes(userQuery.toLowerCase())
+      )
+      .slice(0, 8)
+      .map((u, idx) => (
+        <div
+          key={u.phone}
                                     role="option"
                                     aria-selected={highlightedIndex === idx}
                                     onMouseEnter={() => setHighlightedIndex(idx)}
                                     onMouseLeave={() => setHighlightedIndex(-1)}
                                     onClick={() => {
                                       setNewAssignee(u.name)
-                                      setNewAssigneeId(u._id)
+                                      setNewAssigneeId(u.phone)
                                       setUserQuery("")
                                       setUserDropdownOpen(false)
                                     }}
                                     className={"w-full text-left px-3 py-2 cursor-pointer " + (highlightedIndex === idx ? 'bg-slate-800/60' : '')}
                                   >
-                                    <div className="text-sm text-slate-100">{u.name}</div>
-                                    <div className="text-xs text-slate-400">{u.email || u._id}</div>
+                                    <div className="text-sm text-slate-100">
+  {u.name}
+</div>
+
+<div className="text-xs text-slate-400">
+  {u.phone}
+  {u.portalRole && ` • ${u.portalRole}`}
+</div>
                                   </div>
                                 ))}
                               </div>
@@ -828,12 +866,22 @@ async function confirmCompleted(taskId: string) {
 
                   <div className="border-t border-slate-700 pt-3">
                     <Button
-                      variant="ghost"
-                      className="w-full text-slate-400"
-                      onClick={() => setSelectedTask(null)}
-                    >
-                      Close
-                    </Button>
+  variant="ghost"
+  className="w-full text-slate-400"
+  onClick={() => {
+    const returnTo =
+      searchParams.get("returnTo")
+
+    if (returnTo) {
+      router.push(returnTo)
+      return
+    }
+
+    setSelectedTask(null)
+  }}
+>
+  Close
+</Button>
                   </div>
                 </div>
               </div>

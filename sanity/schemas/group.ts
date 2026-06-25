@@ -67,13 +67,20 @@ export const group = {
     initialValue: "member",
   },
   {
-    name: "linkedUserId",
-    type: "string",
-  },
-  {
-    name: "portalRole",
-    type: "string",
-  },
+  name: "linkedUserId",
+  title: "Linked User ID",
+  type: "string",
+},
+{
+  name: "email",
+  title: "Email",
+  type: "string",
+},
+{
+  name: "portalRole",
+  title: "Portal Role",
+  type: "string",
+},
 ],
         },
       ],

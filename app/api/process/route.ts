@@ -421,12 +421,15 @@ async function resolveAssignee(
   if (!assignee) return null
   if (isStopWord(assignee)) return null
 
-  const users = prefetchedUsers || await sanityClient.fetch(
+  const users: { name: string }[] =
+  prefetchedUsers ??
+  (await sanityClient.fetch<{ name: string }[]>(
     `*[_type == "user" && organisation._ref == $orgId]{
       name
     }`,
     { orgId: organisationId }
-  )
+  )) ??
+  []
 
   const names = users.map((u: any) => u.name)
 
@@ -886,7 +889,7 @@ Status: ${task.status || "pending"}
       }
     }
 
-    let cachedUsers: any[] | null = null
+    let cachedUsers: { name: string }[] | undefined
 
     if (analysis?.assignedTo) {
       cachedUsers = await sanityClient.fetch(

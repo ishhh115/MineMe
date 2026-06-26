@@ -1,9 +1,37 @@
 import { NextResponse } from "next/server"
 import { sanityClient } from "@/lib/sanity"
 import { updateUserRole } from "@/lib/queries"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+
 
 export async function PATCH(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+
+const sessionUser = session?.user as
+  | {
+      organisationId?: string
+      role?: string
+    }
+  | undefined
+
+const organisationId = sessionUser?.organisationId
+const currentRole = sessionUser?.role
+
+if (!organisationId) {
+  return NextResponse.json(
+    { error: "Unauthorized" },
+    { status: 401 }
+  )
+}
+
+if (currentRole !== "admin") {
+  return NextResponse.json(
+    { error: "Only admins can link members" },
+    { status: 403 }
+  )
+}
     const {
       groupId,
       phone,
@@ -41,9 +69,16 @@ export async function PATCH(req: Request) {
 
     // Fetch the group
     const group = await sanityClient.fetch(
-      `*[_type == "group" && _id == $groupId][0]`,
-      { groupId }
-    )
+  `*[
+    _type == "group" &&
+    _id == $groupId &&
+    organisation._ref == $organisationId
+  ][0]`,
+  {
+    groupId,
+    organisationId,
+  }
+)
 
     if (!group) {
       return NextResponse.json(

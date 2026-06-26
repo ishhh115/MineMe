@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { sanityClient } from "@/lib/sanity"
 import { sendWhatsAppMessage } from "@/lib/whapi"
 import crypto from "crypto"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 function normalizePhone(phone: string) {
   const digits = phone.replace(/\D/g, "")
@@ -13,6 +15,36 @@ function normalizePhone(phone: string) {
 
 export async function POST(request: Request) {
   try {
+
+    const session = await getServerSession(authOptions)
+
+    const user = session?.user as
+      | {
+          organisationId?: string
+          role?: string
+        }
+      | undefined
+
+    const organisationId = user?.organisationId
+    const currentRole = user?.role
+
+    if (!organisationId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    if (
+      currentRole !== "admin" &&
+      currentRole !== "manager"
+    ) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      )
+    }
+
     const { phone, role, groupId } = await request.json()
 
     console.log("INVITE REQUEST:", { phone, role, groupId })
@@ -37,14 +69,21 @@ export async function POST(request: Request) {
 
     // Fetch group and its organisation
     const group = await sanityClient.fetch(
-      `*[_type=="group" && _id==$groupId][0]{
-        _id,
-        name,
-        chatId,
-        members,
-        "organisationId": organisation._ref
-      }`,
-      { groupId }
+  `*[
+      _type=="group" &&
+      _id==$groupId &&
+      organisation._ref==$organisationId
+    ][0]{
+      _id,
+      name,
+      chatId,
+      members,
+      "organisationId": organisation._ref
+    }`,
+      {
+  groupId,
+  organisationId,
+}
     )
 
     if (!group) {

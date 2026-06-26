@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group"
+
 
 export default function ActivityActions({
   taskId,
@@ -39,13 +41,16 @@ export default function ActivityActions({
     })
 
     if (res.ok) {
-      router.refresh()
-    }
+  toast.success("Task marked as completed")
+  router.refresh()
+} else {
+  toast.error("Failed to mark task as completed")
+}
   }
 
   const handleSnooze = async () => {
     if (snoozeType === "custom" && !customDate) {
-      alert("Please select a date")
+      toast.error("Please select a date")
       return
     }
 
@@ -80,9 +85,12 @@ export default function ActivityActions({
     })
 
     if (res.ok) {
-      setOpen(false)
-      router.refresh()
-    }
+  setOpen(false)
+  toast.success("Task snoozed")
+  router.refresh()
+} else {
+  toast.error("Failed to snooze task")
+}
   }
 
   return (

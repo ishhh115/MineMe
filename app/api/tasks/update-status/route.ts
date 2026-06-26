@@ -5,6 +5,17 @@ export async function POST(req: Request) {
   try {
     const { taskId, status, snoozeUntil } = await req.json()
 
+    import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+
+const session = await getServerSession(authOptions)
+
+const orgId = (session?.user as { organisationId?: string } | undefined)?.organisationId
+
+if (!orgId) {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+}
+
     console.log("API HIT")
     console.log("TASK:", taskId)
     console.log("STATUS:", status)
@@ -19,6 +30,7 @@ export async function POST(req: Request) {
     const result = await updateTaskStatus(
   taskId,
   status,
+  orgId,
   snoozeUntil
 )
 

@@ -191,6 +191,7 @@ export async function getNotifications(organisationId: string) {
 export async function updateTaskStatus(
   taskId: string,
   status: string,
+  organisationId: string,
   snoozeUntil?: string
 ) {
   console.log("UPDATING TASK:", taskId)
@@ -209,8 +210,9 @@ export async function updateTaskStatus(
       }),
 
       ...(status === "snoozed" && {
-        snoozeUntil,
-      }),
+  snoozeUntil,
+  reminderAt: snoozeUntil,
+}),
     })
     .commit()
 

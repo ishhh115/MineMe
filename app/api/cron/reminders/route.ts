@@ -55,7 +55,7 @@ console.log("TASK COUNT:", taskCount)
   `*[
     _type == "task"
     && organisation._ref == $orgId
-    && status == "pending"
+    && (status == "pending" || status == "snoozed")
     && reminderAt <= $now
     && !defined(reminderSentAt)
   ]{
@@ -127,12 +127,13 @@ console.log("GROUP NAME:", task.groupName)
 
               // Update task reminder sent time and whatsapp status
               await sanityClient
-                .patch(task._id)
-                .set({
-                  reminderSentAt: now.toISOString(),
-                  whatsappStatus: "awaiting_response",
-                })
-                .commit()
+  .patch(task._id)
+  .set({
+    reminderSentAt: now.toISOString(),
+    whatsappStatus: "awaiting_response",
+    status: "pending",
+  })
+  .commit()
 
               totalReminders++
             }

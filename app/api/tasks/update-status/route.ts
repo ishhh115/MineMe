@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { updateTaskStatus } from '@/lib/queries'
 
+    import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+
 export async function POST(req: Request) {
   try {
     const { taskId, status, snoozeUntil } = await req.json()
 
-    import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
 
 const session = await getServerSession(authOptions)
 

@@ -124,10 +124,33 @@ const currentUserRole = user?.role
     await Promise.all(cancellationJobs)
 
     const groupResults = await Promise.all(
-      (groups || []).map((group) =>
-        sanityClient.patch(group._id).set({ isMonitoring: group.isMonitoring }).commit()
-      )
-    )
+  (groups || []).map(async (group) => {
+    const existingGroup = await sanityClient.fetch(
+  `*[
+    _type == "group" &&
+    _id == $groupId &&
+    organisation._ref == $orgId
+  ][0]{
+    _id
+  }`,
+  {
+    groupId: group._id,
+    orgId,
+  }
+)
+
+    if (!existingGroup) {
+      throw new Error(`Group ${group._id} not found or access denied`)
+    }
+
+    return sanityClient
+      .patch(group._id)
+      .set({
+        isMonitoring: group.isMonitoring,
+      })
+      .commit()
+  })
+)
 
     return NextResponse.json({
       message: "Settings saved successfully",

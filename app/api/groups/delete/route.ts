@@ -31,6 +31,31 @@ console.log("ROLE:", (session?.user as any)?.role)
 
     const { groupId } = await req.json()
 
+    const orgId = (
+  session.user as {
+    organisationId?: string
+  }
+).organisationId
+
+const group = await sanityClient.fetch(
+  `*[
+      _type=="group" &&
+      _id==$groupId &&
+      organisation._ref==$orgId
+   ][0]{_id}`,
+  {
+    groupId,
+    orgId,
+  }
+)
+
+if (!group) {
+  return NextResponse.json(
+    { error: "Group not found" },
+    { status:404 }
+  )
+}
+
     const tasks = await sanityClient.fetch(
       `*[_type == "task" && group._ref == $groupId]._id`,
       { groupId }

@@ -198,7 +198,21 @@ export async function updateTaskStatus(
   console.log("NEW STATUS:", status)
   console.log("SNOOZE UNTIL:", snoozeUntil)
 
-  const task = await sanityClient.getDocument(taskId)
+ const task = await sanityClient.fetch(
+  `*[
+    _type == "task" &&
+    _id == $taskId &&
+    organisation._ref == $organisationId
+  ][0]`,
+  {
+    taskId,
+    organisationId,
+  }
+)
+
+if (!task) {
+  throw new Error("Task not found")
+}
 
   const result = await sanityClient
     .patch(taskId)
@@ -244,17 +258,48 @@ export async function updateTaskStatus(
 }
 
 // Snooze task
-export async function snoozeTask(taskId: string, snoozeUntil: string) {
+export async function snoozeTask(
+  taskId: string,
+  snoozeUntil: string,
+  organisationId: string
+) {
+  const task = await sanityClient.fetch(
+    `*[
+      _type == "task" &&
+      _id == $taskId &&
+      organisation._ref == $organisationId
+    ][0]`,
+    {
+      taskId,
+      organisationId,
+    }
+  )
+
+  if (!task) {
+    throw new Error("Task not found or access denied")
+  }
+
   return await sanityClient
     .patch(taskId)
-    .set({ status: "snoozed", snoozeUntil })
+    .set({
+      status: "snoozed",
+      snoozeUntil,
+      reminderAt: snoozeUntil,
+    })
     .commit()
 }
 
 // Create a notification to resend reminder (manual)
-export async function resendReminder(taskId: string) {
+export async function resendReminder(
+taskId: string,
+organisationId: string
+) {
   const task = await sanityClient.fetch(
-    `*[_type == "task" && _id == $taskId][0]{
+    `*[
+_type=="task"
+&& _id==$taskId
+&& organisation._ref==$organisationId
+][0]{
       _id,
       taskText,
       assignedTo,
@@ -265,11 +310,14 @@ export async function resendReminder(taskId: string) {
       "groupName": group->name,
       "organisation": organisation->{_id, whapiToken, notificationPreferences}
     }`,
-    { taskId }
+    {
+    taskId,
+    organisationId,
+}
   )
 
   if (!task) {
-    throw new Error("Task not found")
+    throw new Error("Task not found or access denied")
   }
 
   const notifications: Array<{ channel: string; success: boolean; result: unknown }> = []
@@ -369,10 +417,25 @@ export async function resendReminder(taskId: string) {
 
 // Edit a task's deadline
 export async function editTaskDeadline(
-  taskId: string,
-  newDeadline: string
+taskId: string,
+newDeadline: string,
+organisationId: string
 ) {
-  const task = await sanityClient.getDocument(taskId)
+  const task = await sanityClient.fetch(
+  `*[
+    _type=="task" &&
+    _id==$taskId &&
+    organisation._ref==$organisationId
+  ][0]`,
+  {
+    taskId,
+    organisationId,
+  }
+)
+
+if (!task) {
+  throw new Error("Task not found")
+}
 
   let calculatedUrgency: "high" | "medium" | "low" = "low"
 
@@ -430,10 +493,25 @@ export async function editTaskDeadline(
 }
 // Reassign a task to a different user/assignee
 export async function reassignTask(
-  taskId: string,
-  assignee: string
+taskId: string,
+assignee: string,
+organisationId: string
 ) {
-  const task = await sanityClient.getDocument(taskId)
+  const task = await sanityClient.fetch(
+  `*[
+    _type=="task" &&
+    _id==$taskId &&
+    organisation._ref==$organisationId
+  ][0]`,
+  {
+    taskId,
+    organisationId,
+  }
+)
+
+if (!task) {
+  throw new Error("Task not found")
+}
 
   const result = await sanityClient
     .patch(taskId)
@@ -457,16 +535,30 @@ export async function reassignTask(
 }
 
 // Delete a task
-export async function deleteTask(taskId: string) {
+export async function deleteTask(
+  taskId: string,
+  organisationId: string
+) {
 
   const task = await sanityClient.fetch(
-    `*[_type == "task" && _id == $taskId][0]{
-      _id,
-      taskText,
-      organisation
-    }`,
-    { taskId }
-  )
+  `*[
+    _type == "task"
+    && _id == $taskId
+    && organisation._ref == $organisationId
+  ][0]{
+    _id,
+    taskText,
+    organisation
+  }`,
+  {
+    taskId,
+    organisationId,
+  }
+)
+
+if (!task) {
+  throw new Error("Task not found or access denied")
+}
 
   const refs = await sanityClient.fetch(
     `*[references($taskId)]{
@@ -482,7 +574,7 @@ export async function deleteTask(taskId: string) {
     await sanityClient.delete(ref._id)
   }
 
-  await sanityClient.delete(taskId)
+  await sanityClient.delete(task._id)
 
   if (task) {
     await sanityClient.create({

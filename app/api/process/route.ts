@@ -26,6 +26,31 @@ function isImmediateIntent(text: string): boolean {
   return IMMEDIATE_KEYWORDS.some((kw) => lower.includes(kw))
 }
 
+const ASSIGNEE_STOP_WORDS = new Set([
+  "now",
+  "asap",
+  "urgent",
+  "urgently",
+  "critical",
+  "immediately",
+  "right away",
+  "today",
+  "tomorrow",
+  "tonight",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+])
+
+function isStopWord(word: string): boolean {
+  if (!word) return false
+  return ASSIGNEE_STOP_WORDS.has(word.toLowerCase().trim())
+}
+
 function parseDeadline(raw: string | null): string | null {
   if (!raw) return null
   try {
@@ -38,10 +63,11 @@ function parseDeadline(raw: string | null): string | null {
 
 function resolveDeadlineAndImmediate(
   rawDeadline: string | null,
-  messageText: string
+  messageText: string,
+  urgency?: "high" | "medium" | "low" | null
 ): { deadlineISO: string | null; immediate: boolean } {
   let deadlineISO = parseDeadline(rawDeadline)
-  const immediate = isImmediateIntent(messageText) && !deadlineISO
+  const immediate = (isImmediateIntent(messageText) || urgency === "high") && !deadlineISO
   if (immediate) {
     deadlineISO = new Date(Date.now() + 10 * 60 * 1000).toISOString()
   }
@@ -164,19 +190,21 @@ new_task — Creates a new task.
 - Common action verbs: fix, check, review, test, complete, finish, prepare, submit, send, deploy, update, create, build, design, verify, investigate, call, follow up
 
 update_task — Modifies an existing task (deadline, assignee, details).
+- Messages starting with update/change/reschedule verbs (e.g. "Move deadline", "Change deadline", "Reschedule") MUST use update_task (if target task is clear) or ambiguous_update (if multiple tasks match), NEVER new_task.
 - targetTask MUST be identified and exist in context.
 - If target is unclear among multiple tasks → return ambiguous_update.
 - "Move deadline to Friday" → update_task (if target is clear)
 
-complete_task — Work is clearly ALREADY finished.
-- "Done", "Completed", "Bug fixed", "Deployment completed" → complete_task
+complete_task — Work is clearly ALREADY finished or being marked as completed.
+- "Done", "Completed", "Bug fixed", "Deployment completed", "Mark done", "Complete [task]" → complete_task
 - targetTask MUST be identified.
 - "Rahul complete deployment" is new_task (assignment), NOT complete_task.
 
 reassign_task — Changes ownership of an existing task.
+- ONLY classify as reassign_task if the target task is clearly present in the previous conversation context list. Otherwise, classify as new_task.
 - Messages starting with Assign/Reassign/Give/Move + task + to + person.
-- "Assign testing to Rahul" → reassign_task
-- "Give checkout bug to Rahul" → reassign_task
+- "Assign testing to Rahul" (if "testing" is in the context list) → reassign_task
+- "Give checkout bug to Rahul" (if "checkout bug" is in the context list) → reassign_task
 
 not_task — Discussion, opinion, suggestion, general conversation.
 
@@ -195,9 +223,10 @@ If a message contains 2+ independent task assignments, return:
 }
 Detection rules:
 - Multiple names each followed by an action → multiple_tasks
-- Line breaks or periods separating assignments → multiple_tasks
+- Line breaks, periods, or conjunctions separating assignments or actions → multiple_tasks
+- A single person assigned multiple actions, or multiple independent tasks (e.g., "Rahul review PR and deploy backend tomorrow and update README Friday") → multiple_tasks with a separate task object for each action (e.g., review PR, deploy backend, update README).
 - "X do A and Y do B" → multiple_tasks
-- Never merge multiple assignments into one task.
+- Never merge multiple assignments or actions into one task.
 - Never return only the first task.
 
 MIXED MESSAGES: Extract only the task portion, ignore conversational parts.
@@ -234,6 +263,16 @@ EXAMPLES:
 
 "Hey team, great work! Rahul please fix the login bug by tomorrow."
 → { "action": "new_task", "taskText": "fix the login bug", "assignedTo": "Rahul" }
+
+"Rahul review PR and deploy backend tomorrow and update README Friday"
+→ {
+  "action": "multiple_tasks",
+  "tasks": [
+    { "taskText": "review PR", "assignedTo": "Rahul", "deadline": null, "urgency": "low" },
+    { "taskText": "deploy backend", "assignedTo": "Rahul", "deadline": "tomorrow's date", "urgency": "medium" },
+    { "taskText": "update README", "assignedTo": "Rahul", "deadline": "Friday's date", "urgency": "low" }
+  ]
+}
 `,
         },
         {
@@ -267,20 +306,127 @@ ${text}
 }
 
 
+function cleanTaskTextRules(text: string): string {
+  if (!text) return ""
+  let clean = text.trim()
+
+  // Remove unnecessary leading helper words repeatedly
+  let changed = true
+  while (changed) {
+    changed = false
+    const leadingRegex = /^(please|can\s+you|could\s+you|need\s+to|should|will|assign|make\s+sure\s+to|make\s+sure)\b/i
+    const match = clean.match(leadingRegex)
+    if (match) {
+      clean = clean.replace(leadingRegex, "").trim()
+      changed = true
+    }
+  }
+
+  // Remove any leading punctuation that might be left over
+  clean = clean.replace(/^[:,\-\s]+/, "").trim()
+  return clean
+}
+
+function extractAndCleanTask(
+  taskText: string | null,
+  assignedTo: string | null,
+  hasDeadline: boolean
+): { taskText: string | null; assignedTo: string | null } {
+  let text = taskText ? taskText.trim() : ""
+  let assignee = assignedTo ? assignedTo.trim() : null
+
+  // If assignee is a stop word, nullify it
+  if (assignee && isStopWord(assignee)) {
+    assignee = null
+  }
+
+  // If assignee is not yet set, try to extract candidate assignee from taskText
+  if (!assignee && text) {
+    // Look for patterns like "assigned to Name", "assign to Name", "to Name", "for Name"
+    const assignPattern = /\b(?:[aA][sS][sS][iI][gG][nN][eE][dD]\s+[tT][oO]|[aA][sS][sS][iI][gG][nN]\s+[tT][oO]|[tT][oO]|[fF][oO][rR])\s+([A-Z][a-zA-Z.\-]*(?:\s+[A-Z][a-zA-Z.\-]*)*)\b/
+    const assignMatch = text.match(assignPattern)
+    if (assignMatch && !isStopWord(assignMatch[1])) {
+      assignee = assignMatch[1]
+    } else {
+      // Look for modal verb patterns like "can Name review", "should Name fix", etc.
+      const modalPattern = /\b(?:[cC][aA][nN]|[cC][oO][uU][lL][dD]|[sS][hH][oO][uU][lL][dD]|[wW][iI][lL][lL]|[pP][lL][eE][aA][sS][eE])\s+([A-Z][a-zA-Z.\-]*(?:\s+[A-Z][a-zA-Z.\-]*)*)\s+(?:fix|check|review|test|complete|finish|prepare|submit|send|deploy|update|create|build|design|verify|investigate|call|follow\s+up|make|do)\b/
+      const modalMatch = text.match(modalPattern)
+      if (modalMatch && !isStopWord(modalMatch[1])) {
+        assignee = modalMatch[1]
+      } else {
+        // Look for capitalized name at the very end of the string (e.g. "Finish UI Rahul Kumar")
+        const words = text.split(/\s+/)
+        let collected: string[] = []
+        for (let i = words.length - 1; i >= 0; i--) {
+          const w = words[i].replace(/[^\w.\-]/g, "")
+          if (w && (/^[A-Z][a-z]/.test(w) || /^[A-Z]\./.test(w)) && !isStopWord(w)) {
+            collected.unshift(words[i])
+          } else {
+            break
+          }
+        }
+        if (collected.length > 0) {
+          assignee = collected.join(" ").replace(/[^\w\s.\-]/g, "").trim()
+        }
+      }
+    }
+  }
+
+  // If we have an assignee candidate, remove the assignee and prepositions from the task text
+  if (assignee) {
+    const escapedAssignee = assignee.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&')
+    const patterns = [
+      new RegExp(`\\b(?:[aA][sS][sS][iI][gG][nN][eE][dD]\\s+[tT][oO]|[aA][sS][sS][iI][gG][nN]\\s+[tT][oO]|[tT][oO]|[fF][oO][rR])\\s+${escapedAssignee}\\b`),
+      new RegExp(`\\b${escapedAssignee}\\b`)
+    ]
+    for (const pattern of patterns) {
+      if (pattern.test(text)) {
+        text = text.replace(pattern, "").replace(/\s+/g, " ").trim()
+        break
+      }
+    }
+  }
+
+  // Clean deadline phrases if there is a deadline
+  if (hasDeadline && text) {
+    const deadlineRegexes = [
+      /\b(?:by|on|at|before|due|for)?\s*(?:today|tomorrow|tonight|eod|end\s+of\s+(?:the\s+)?day|this\s+evening|next\s+week)\b/i,
+      /\b(?:by|on|at|before|due|for)?\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+morning|\s+afternoon|\s+evening|\s+night)?\b/i,
+      /\b(?:by|on|at|before|due|for)?\s*(?:noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))\b/i,
+      /\b(?:in|after)\s+\d+\s+(?:minute|hour|day)s?\b/i,
+    ]
+    for (const regex of deadlineRegexes) {
+      text = text.replace(regex, "")
+    }
+    text = text.replace(/\s+/g, " ").trim()
+  }
+
+  // Apply general helper verb / word cleaning rules
+  text = cleanTaskTextRules(text)
+
+  // Clean up trailing punctuation left behind
+  text = text.replace(/[:,\-\s]+$/, "").trim()
+
+  return {
+    taskText: text || null,
+    assignedTo: assignee,
+  }
+}
+
 async function resolveAssignee(
   assignee: string | null,
-  organisationId: string
+  organisationId: string,
+  prefetchedUsers?: any[]
 ) {
   if (!assignee) return null
+  if (isStopWord(assignee)) return null
 
-  const users = await sanityClient.fetch(
+  const users = prefetchedUsers || await sanityClient.fetch(
     `*[_type == "user" && organisation._ref == $orgId]{
       name
     }`,
     { orgId: organisationId }
   )
-
-  console.log("USERS FOUND:", users)
 
   const names = users.map((u: any) => u.name)
 
@@ -395,6 +541,7 @@ interface PipelineContext {
   organisationId: string
   groupId: string
   messageIdSuffix?: string
+  immediateMessageText?: string
 }
 
 async function createTaskFromAnalysis(
@@ -406,7 +553,8 @@ async function createTaskFromAnalysis(
 
   const { deadlineISO, immediate } = resolveDeadlineAndImmediate(
     input.deadline,
-    ctx.originalMessage
+    ctx.immediateMessageText || ctx.originalMessage,
+    input.urgency
   )
 
 
@@ -461,7 +609,7 @@ async function createTaskFromAnalysis(
   }
 
   if (duplicateTask) {
-    console.log("Duplicate task detected, skipping:", normalizedNewTask)
+    console.warn(`Duplicate task detected, skipping: "${normalizedNewTask}" (matches existing task ID: ${duplicateTask._id}, text: "${duplicateTask.taskText}", assignee: ${duplicateTask.assignedTo || "unassigned"})`)
     return null
   }
 
@@ -471,17 +619,10 @@ async function createTaskFromAnalysis(
 
   const reminderAt = calculateReminder(deadlineISO, finalUrgency, immediate)
 
-  console.log("GPT URGENCY:", input.urgency)
-  console.log("FINAL URGENCY:", finalUrgency)
-  console.log("DEADLINE:", deadlineISO)
-  console.log("REMINDER AT:", reminderAt)
-
 
   const effectiveMessageId = ctx.messageIdSuffix
     ? `${ctx.messageId}${ctx.messageIdSuffix}`
     : ctx.messageId
-
-  console.log("PROCESS ORG:", ctx.organisationId)
 
   const task = await sanityClient.create({
     _type: "task",
@@ -511,7 +652,7 @@ async function createTaskFromAnalysis(
   })
 
 
-  console.log("GROUP ID USED FOR COUNTER:", ctx.groupId)
+
 
   await sanityClient
     .patch(ctx.groupId)
@@ -611,8 +752,6 @@ export async function POST(request: Request) {
     const organisationId =
       orgId || process.env.NEXT_PUBLIC_ORG_ID
 
-    console.log("PROCESS ORG:", organisationId)
-
     if (!organisationId) {
       return NextResponse.json({ message: "No organisation ID" }, { status: 400 })
     }
@@ -629,11 +768,22 @@ export async function POST(request: Request) {
       alreadyProcessed &&
       alreadyProcessed.originalMessage !== text
 
-    if (alreadyProcessed && !isEditedMessage) {
-      return NextResponse.json({
-        message: "Already processed",
-        isTask: false
-      })
+    if (alreadyProcessed) {
+      if (isEditedMessage) {
+        console.log(`Detected edited message for ID ${messageId}. Deleting old tasks and re-processing.`)
+        await sanityClient.delete({
+          query: `*[_type == "task" && (messageId == $messageId || messageId match $messageIdSuffix)]`,
+          params: {
+            messageId: messageId || "",
+            messageIdSuffix: `${messageId}-*`
+          }
+        })
+      } else {
+        return NextResponse.json({
+          message: "Already processed",
+          isTask: false
+        })
+      }
     }
 
     const withinLimit = await checkRateLimit(organisationId)
@@ -671,13 +821,14 @@ Status: ${task.status || "pending"}
       /^([a-zA-Z]+)\s+(fix|check|review|test|complete|finish|prepare|submit|send|deploy|update|create|build|design|verify|investigate|call|follow\s+up|make|do)\b/i
 
     const explicitMatch = text.trim().match(explicitAssignmentRegex)
+    const isExplicitAssigneeStopWord = explicitMatch && isStopWord(explicitMatch[1])
 
     const multipleAssignments =
       text.split(/\n|\./).filter(Boolean).length > 1
 
     let analysis
 
-    if (explicitMatch && !multipleAssignments) {
+    if (explicitMatch && !multipleAssignments && !isExplicitAssigneeStopWord) {
       const assignee = explicitMatch[1]
 
       const taskText = text
@@ -701,7 +852,6 @@ Status: ${task.status || "pending"}
         confidence: 1,
       }
 
-      console.log("RULE BASED TASK:", analysis)
     } else {
       analysis = await analyzeMessage(
         text,
@@ -709,26 +859,46 @@ Status: ${task.status || "pending"}
       )
     }
 
-    console.log("GPT ANALYSIS:", analysis)
-
-    if (analysis) {
-      console.log("TARGET TASK:", analysis?.targetTask)
-    }
-    console.log("CONTEXT:")
-    console.log(conversationContext)
-
     if (!analysis) {
-      console.log("OpenAI failed, using keyword fallback")
       analysis = keywordFallback(text)
     }
 
-    console.log("Analysis result:", analysis)
+    if (analysis) {
+      if (analysis.action === "multiple_tasks" && Array.isArray(analysis.tasks)) {
+        for (let i = 0; i < analysis.tasks.length; i++) {
+          const current = analysis.tasks[i]
+          const cleaned = extractAndCleanTask(
+            current.taskText,
+            current.assignedTo,
+            !!current.deadline
+          )
+          current.taskText = cleaned.taskText
+          current.assignedTo = cleaned.assignedTo
+        }
+      } else {
+        const cleaned = extractAndCleanTask(
+          analysis.taskText,
+          analysis.assignedTo,
+          !!analysis.deadline
+        )
+        analysis.taskText = cleaned.taskText
+        analysis.assignedTo = cleaned.assignedTo
+      }
+    }
 
+    let cachedUsers: any[] | null = null
 
     if (analysis?.assignedTo) {
+      cachedUsers = await sanityClient.fetch(
+        `*[_type == "user" && organisation._ref == $orgId]{
+          name
+        }`,
+        { orgId: organisationId }
+      )
       analysis.assignedTo = await resolveAssignee(
         analysis.assignedTo,
-        organisationId
+        organisationId,
+        cachedUsers
       )
     }
 
@@ -741,18 +911,30 @@ Status: ${task.status || "pending"}
     }
 
     if (analysis.action === "complete_task") {
-      const targetTask = await sanityClient.fetch(
-        `*[
-          _type == "task" &&
-          group->chatId == $chatId &&
-          status == "pending" &&
-          taskText match $taskText
-        ][0]`,
-        {
-          chatId,
-          taskText: `*${analysis.targetTask}*`,
-        }
-      )
+      let targetTask = null
+      
+      if (analysis.targetTask) {
+        targetTask = await sanityClient.fetch(
+          `*[
+            _type == "task" &&
+            group->chatId == $chatId &&
+            status == "pending" &&
+            taskText match $taskText
+          ][0]`,
+          {
+            chatId,
+            taskText: `*${analysis.targetTask}*`,
+          }
+        )
+      }
+
+      if (!targetTask) {
+        // Fallback to the most recent pending task in the group
+        targetTask = await sanityClient.fetch(
+          `*[_type == "task" && group->chatId == $chatId && status == "pending"] | order(createdAt desc)[0]`,
+          { chatId }
+        )
+      }
 
       if (targetTask) {
         await sanityClient
@@ -767,6 +949,12 @@ Status: ${task.status || "pending"}
           success: true,
           action: "complete_task",
           taskId: targetTask._id,
+        })
+      } else {
+        return NextResponse.json({
+          success: false,
+          action: "complete_task",
+          message: "No pending tasks found to complete.",
         })
       }
     }
@@ -849,25 +1037,42 @@ updateData.reminderAt = reminderAt
         }
       )
 
-      if (!targetTask) {
+      if (targetTask) {
+        await sanityClient
+          .patch(targetTask._id)
+          .set({
+            assignedTo: analysis.assignedTo,
+          })
+          .commit()
+
         return NextResponse.json({
-          success: false,
-          message: "Target task not found",
+          success: true,
+          action: "reassign_task",
+          taskId: targetTask._id,
         })
-      }
+      } else {
+  if (!analysis.targetTask) {
+    return NextResponse.json({
+      success: false,
+      message: "Unable to determine task to create.",
+    })
+  }
 
-      await sanityClient
-        .patch(targetTask._id)
-        .set({
-          assignedTo: analysis.assignedTo,
-        })
-        .commit()
+  console.warn(
+    `Reassign target "${analysis.targetTask}" not found. Falling back to new task creation.`
+  )
 
-      return NextResponse.json({
-        success: true,
-        action: "reassign_task",
-        taskId: targetTask._id,
-      })
+  analysis.action = "new_task"
+
+  const cleanedFallback = extractAndCleanTask(
+    analysis.targetTask,
+    analysis.assignedTo,
+    !!analysis.deadline
+  )
+
+  analysis.taskText = cleanedFallback.taskText
+  analysis.assignedTo = cleanedFallback.assignedTo
+}
     }
 
     if (!analysis.isTask || analysis.confidence < 0.5) {
@@ -891,33 +1096,8 @@ updateData.reminderAt = reminderAt
     }
 
 
-    if (alreadyProcessed && isEditedMessage) {
-      const { deadlineISO, immediate } = resolveDeadlineAndImmediate(
-        analysis.deadline,
-        text
-      )
-      const finalUrgency = calculateUrgency(deadlineISO, analysis.urgency, immediate)
-      const reminderAt = calculateReminder(deadlineISO, finalUrgency, immediate)
-
-      await sanityClient
-        .patch(alreadyProcessed._id)
-        .set({
-          taskText: analysis.taskText,
-          assignedTo: analysis.assignedTo,
-          deadline: deadlineISO,
-          urgency: finalUrgency,
-          reminderAt,
-          originalMessage: text,
-          confidence: analysis.confidence,
-        })
-        .commit()
-
-      return NextResponse.json({
-        success: true,
-        action: "edited_task",
-        taskId: alreadyProcessed._id,
-      })
-    }
+    // Edited message handling is now processed at the start of the handler
+    // by deleting the previous tasks and letting them recreate fresh.
 
 
     const pipelineCtx: PipelineContext = {
@@ -935,9 +1115,19 @@ updateData.reminderAt = reminderAt
       for (let i = 0; i < analysis.tasks.length; i++) {
         const current = analysis.tasks[i]
 
+        if (current.assignedTo && !cachedUsers) {
+          cachedUsers = await sanityClient.fetch(
+            `*[_type == "user" && organisation._ref == $orgId]{
+              name
+            }`,
+            { orgId: organisationId }
+          )
+        }
+
         const resolvedAssignee = await resolveAssignee(
           current.assignedTo,
-          organisationId
+          organisationId,
+          cachedUsers || undefined
         )
 
         const taskResult = await createTaskFromAnalysis(
@@ -951,6 +1141,7 @@ updateData.reminderAt = reminderAt
           {
             ...pipelineCtx,
             messageIdSuffix: i === 0 ? undefined : `-${i}`,
+            immediateMessageText: current.taskText || undefined,
           }
         )
 

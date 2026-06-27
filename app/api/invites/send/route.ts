@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     const { phone, role, groupId } = await request.json()
 
-    console.log("INVITE REQUEST:", { phone, role, groupId })
+
 
     if (!phone || !role || !groupId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 })
@@ -99,8 +99,7 @@ export async function POST(request: Request) {
       (member: any) => normalizePhone(member.phone || "") === normalizedPhone
     )
 
-    console.log("NORMALIZED INPUT:", normalizedPhone)
-    console.log("EXISTS:", exists)
+
 
     if (exists) {
       return NextResponse.json(
@@ -151,7 +150,7 @@ _Powered by MindMe_`
 
     const whatsappResult = await sendWhatsAppMessage(whatsappChatId, message)
 
-    console.log("WHATSAPP INVITE RESULT:", whatsappResult)
+
 
     // Don't fail the invite if WhatsApp send fails — invite is saved either way
     return NextResponse.json({

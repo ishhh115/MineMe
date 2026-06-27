@@ -59,7 +59,7 @@ function formatDeadline(dateStr: string) {
 }
 
 export default async function DashboardPage() {
-  console.log("🔥 DASHBOARD PAGE LOADED")
+
   const {
   stats,
   recentActivity,

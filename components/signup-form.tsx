@@ -80,7 +80,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 
       router.push(`/verify?email=${encodeURIComponent(email)}`)
     } catch (error) {
-  console.error("Signup error:", error)
+
   setError("Something went wrong. Please try again.")
   setLoading(false)
 }

@@ -389,8 +389,6 @@ if (selectedTask?._id === taskId) {
   )
 
   setSelectedTask((prev) => {
-    console.log("UPDATING SELECTED TASK", prev)
-
     return prev
       ? {
           ...prev,

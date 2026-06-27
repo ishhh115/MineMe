@@ -31,16 +31,10 @@ export async function GET() {
     // Fetch all groups from Whapi
 const data = await getWhatsappGroups()
 
-console.log(
-  "WHAPI GROUPS FETCHED:",
-  JSON.stringify(data, null, 2)
-)
+
     const whapiGroups = data.groups || []
 
-    console.log(
-  "TOTAL WHAPI GROUPS:",
-  whapiGroups.length
-)
+
 
     if (whapiGroups.length === 0) {
       return NextResponse.json({ groups: [] })
@@ -87,14 +81,7 @@ console.log(
       return adminIsPresent
     })
 
-    console.log(`Admin phone: ${normalizedAdminPhone}`)
-    console.log(`Total Whapi groups: ${whapiGroups.length}`)
-    console.log(`Available for this org: ${availableGroups.length}`)
 
-    console.log(
-  "GROUPS RETURNED TO UI:",
-  availableGroups.length
-)
 
     return NextResponse.json({ groups: availableGroups })
   } catch (error) {

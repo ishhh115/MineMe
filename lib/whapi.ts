@@ -9,23 +9,17 @@
     options?: { token?: string; baseUrl?: string }
   ) {
     const token = options?.token || WHAPI_TOKEN
-    console.log(
-  "USING TOKEN:",
-  token?.slice(0, 15)
-)
+
     const baseUrl = options?.baseUrl || WHAPI_URL
 
     if (!token) {
-      console.log("Whapi token not set — skipping WhatsApp send")
+
       return { success: false, reason: "no_token" }
     }
 
     try {
 
-    console.log("WHAPI PAYLOAD:", {
-      to: chatId,
-      body: message,
-    })
+
 
     const response = await fetch(`${baseUrl}/messages/text`, {
         method: "POST",
@@ -92,15 +86,9 @@
 
   const data = await response.json()
 
-  console.log(
-  "WHAPI STATUS:",
-  response.status
-)
 
-console.log(
-  "WHAPI RESPONSE:",
-  JSON.stringify(data, null, 2)
-)
+
+
 
   if (!response.ok) {
     console.error("Interactive message error:", data)
@@ -175,9 +163,7 @@ _Powered by MindMe_`
     urgency,
   })
 
-  console.log("REMINDER TARGET:", chatId)
-  console.log("REMINDER BODY:", message)
-  console.log("TOKEN:", token?.slice(0, 10))
+
 
   return await sendInteractiveReminder(
   chatId,
@@ -222,10 +208,7 @@ _Powered by MindMe_`
         )
 
         const details = await detailsResponse.json()
-        console.log(
-  "WHAPI PARTICIPANTS:",
-  details.participants
-)
+
 
         return {
           ...group,

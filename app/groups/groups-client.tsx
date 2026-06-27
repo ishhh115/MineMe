@@ -170,7 +170,7 @@ async function loadWhatsappGroups() {
     const res = await fetch("/api/groups/whatsapp")
     const data = await res.json()
 
-    console.log("WHATSAPP GROUPS:", data)
+
 
     setWhatsappGroups(data.groups || [])
     setShowImportModal(true)
@@ -199,7 +199,7 @@ async function importSelectedGroups() {
 
     const data = await res.json()
 
-    console.log("IMPORT RESULT:", data)
+
 
     window.location.reload()
   } catch (error) {
@@ -286,7 +286,7 @@ const filteredGroups = React.useMemo(() => {
     })
   }, [groups, healthFilter, search])
 
-  console.log("STATE GROUPS:", whatsappGroups)
+
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">

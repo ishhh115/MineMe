@@ -90,13 +90,7 @@ const newOrg = await sanityClient.create({
       }),
     })
 
-    // Log verification code locally for testing when email is not available
-    if (!emailResult.success) {
-      console.log("====================================")
-      console.log("EMAIL NOT SENT — LOCAL DEVELOPMENT")
-      console.log(`Verification code for ${email}: ${verificationCode}`)
-      console.log("====================================")
-    }
+
 
     return NextResponse.json(
       {

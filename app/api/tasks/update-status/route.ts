@@ -17,9 +17,7 @@ if (!orgId) {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 }
 
-    console.log("API HIT")
-    console.log("TASK:", taskId)
-    console.log("STATUS:", status)
+
 
     if (!taskId || !status) {
       return NextResponse.json(

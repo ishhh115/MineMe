@@ -34,12 +34,9 @@ export async function getGroupDetailData(groupId: string) {
       { groupId, orgId }
     )
 
-    console.log(
-  "GROUP FROM SANITY:",
-  JSON.stringify(group, null, 2)
-)
 
-    console.log("GROUP MEMBERS:", group?.members)
+
+
     if (!group) return { group: null, tasks: [], notifications: [], messages: [], users: [] }
 
     const tasks = await sanityClient.fetch(
@@ -84,7 +81,7 @@ export async function getGroupDetailData(groupId: string) {
     const currentUser = users.find(
   (u) => u.email === session?.user?.email
 )
-    console.log("USERS FETCHED FOR GROUP DETAIL:", users)
+
 
     return { group, tasks, notifications, messages, users ,currentUser ,invites}
   } catch (error) {

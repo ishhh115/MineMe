@@ -11,9 +11,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
-    console.log("========== WEBHOOK RECEIVED ==========")
-    console.log(JSON.stringify(payload, null, 2))
-    console.log("=====================================")
+
     const messages = payload.messages
 
     if (!messages || messages.length === 0) {
@@ -28,7 +26,7 @@ export async function POST(request: Request) {
       ) {
         const editedText = message.action?.edited_content?.body
         const originalMessageId = message.action?.target
-        console.log("EDITED MESSAGE DETECTED:", editedText)
+
         if (editedText) {
           await processMessage({
             chatId: message.chat_id,
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
       if (!text && !buttonReply) continue
       if (message.from_me) continue
 
-      console.log("New message received:", { chatId, sender, text, timestamp, messageId })
+
 
       const trimmedText = text?.trim() || ""
 
@@ -102,7 +100,7 @@ export async function POST(request: Request) {
 
       // ── STEP 5: Clean and send to AI ─────────────────────────────────────
       const cleanedText = cleanMessage(text)
-      console.log("Calling AI processor...")
+
       await processMessage({
         chatId,
         groupName: message.chat_name,
@@ -113,7 +111,7 @@ export async function POST(request: Request) {
       })
     }
 
-    console.log("AI processor finished")
+
     return NextResponse.json({ status: "ok" })
   } catch (error) {
     console.error("Webhook error:", error)
@@ -134,7 +132,7 @@ async function handleGroupClaim({
   inviteCode: string
 }) {
   try {
-    console.log("GROUP CLAIM ATTEMPT:", { chatId, inviteCode, sender })
+
 
     if (!inviteCode) {
       await sendWhatsAppMessage(
@@ -151,7 +149,7 @@ async function handleGroupClaim({
     )
 
     if (!org) {
-      console.log("INVALID INVITE CODE:", inviteCode)
+
       await sendWhatsAppMessage(
         chatId,
         `❌ Invalid invite code: ${inviteCode}\n\nPlease check your code and try again.`
@@ -159,7 +157,7 @@ async function handleGroupClaim({
       return
     }
 
-    console.log("ORG FOUND FOR CLAIM:", org._id, org.name)
+
 
     // Check if this group is already claimed
     const existingGroup = await sanityClient.fetch(
@@ -189,7 +187,7 @@ async function handleGroupClaim({
         })
         .commit()
 
-      console.log("GROUP RECONNECTED:", existingGroup._id, "→", org._id)
+
 
       await sendWhatsAppMessage(
         chatId,
@@ -212,7 +210,7 @@ async function handleGroupClaim({
       createdAt: now,
     })
 
-    console.log("GROUP CLAIMED:", newGroup._id, "→ org:", org._id)
+
 
     await sendWhatsAppMessage(
       chatId,
@@ -249,7 +247,6 @@ async function handleReminderReply({
     )
 
     if (!task) {
-      console.log("No pending task found for reply:", { chatId, sender, reply })
       return
     }
 
@@ -267,7 +264,7 @@ async function handleReminderReply({
         .append("actionsLog", [{ action: "completed_via_whatsapp", performedBy: sender, timestamp: now, note: "User replied 1 to reminder" }])
         .commit()
 
-      console.log("Task marked complete:", task._id)
+
       await sendWhatsAppMessage(chatId, `✅ Task marked as completed.\n\nTask: ${task.taskText}`)
 
     } else if (reply === "2") {
@@ -280,7 +277,7 @@ async function handleReminderReply({
         .append("actionsLog", [{ action: "snoozed_via_whatsapp", performedBy: sender, timestamp: now, note: `Snoozed until ${new Date(snoozeUntil).toLocaleTimeString()}` }])
         .commit()
 
-      console.log("Task snoozed:", task._id)
+
       await sendWhatsAppMessage(chatId, `⏰ Task snoozed for 2 hours.\n\nTask: ${task.taskText}`)
     }
   } catch (error) {
@@ -325,11 +322,10 @@ async function storeRawMessage({
       { chatId }
     )
 
-    console.log("GROUP FULL:", JSON.stringify(group, null, 2))
+
 
     const orgId = group?.organisationId
     if (!orgId || !group?._id) {
-      console.log("UNCLAIMED GROUP — ignoring message from:", chatId)
       return
     }
 
@@ -388,14 +384,13 @@ async function processMessage({
       { chatId }
     )
 
-    console.log("GROUP FULL:", JSON.stringify(group, null, 2))
+
 
     const orgId = group?.organisationId
 
     if (!orgId) {
       // Group not claimed yet — do NOT auto-create under any default org
-      console.log("UNCLAIMED GROUP — ignoring message from:", chatId)
-      console.log("To claim this group, send: /connect MINDME-EXRZ4Q")
+
       return
     }
 
@@ -417,7 +412,7 @@ async function processMessage({
     )
 
     const result = await response.json()
-    console.log("Process result:", result)
+
   } catch (error) {
     console.error("Process message error:", error)
   }

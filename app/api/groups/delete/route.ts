@@ -8,9 +8,7 @@ export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    console.log("SESSION:", session)
-console.log("SESSION USER:", session?.user)
-console.log("ROLE:", (session?.user as any)?.role)
+
 
     if (!session) {
       return NextResponse.json(

@@ -23,7 +23,7 @@ export async function sendEmail({
 
     return { success: true, messageId: data.messageId }
   } catch (error) {
-    console.error("Email send error:", error)
+   
     return { success: false, error }
   }
 }

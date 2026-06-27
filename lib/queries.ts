@@ -35,17 +35,13 @@ export async function getDashboardStats(organisationId: string) {
       )
     : 0
 
-console.log("DASHBOARD STATS:", {
-  delivered: stats.totalRemindersDelivered,
-  responses: stats.totalResponses,
-  responseRate,
-})
+
 
 return {
   ...stats,
   responseRate,
 }
-  console.log("FETCHING STATS FOR:", organisationId)
+  
 }
 
 // Get recent activity
@@ -70,8 +66,7 @@ export async function getRecentActivity(organisationId: string) {
     }`,
     { orgId: organisationId }
   )
-  console.log("RECENT ACTIVITY TASKS:")
-console.log(tasks)
+
   return tasks
 }
 
@@ -89,7 +84,7 @@ export async function getUpcomingDeadlines(organisationId: string) {
     { orgId: organisationId, now }
   )
 
-  console.log("UPCOMING DEADLINES:", tasks)
+
 
   return tasks
 }
@@ -194,9 +189,7 @@ export async function updateTaskStatus(
   organisationId: string,
   snoozeUntil?: string
 ) {
-  console.log("UPDATING TASK:", taskId)
-  console.log("NEW STATUS:", status)
-  console.log("SNOOZE UNTIL:", snoozeUntil)
+  
 
  const task = await sanityClient.fetch(
   `*[
@@ -252,7 +245,7 @@ if (!task) {
     })
   }
 
-  console.log("PATCH RESULT:", result)
+
 
   return result
 }
@@ -568,7 +561,7 @@ if (!task) {
     { taskId }
   )
 
-  console.log("TASK REFERENCES:", refs)
+
 
   for (const ref of refs) {
     await sanityClient.delete(ref._id)

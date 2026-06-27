@@ -64,12 +64,7 @@ export async function POST(request: Request) {
         }),
       })
 
-      if (!emailResult.success) {
-        console.log("====================================")
-        console.log("EMAIL NOT SENT — LOCAL DEVELOPMENT")
-        console.log(`Password reset code for ${email}: ${resetCode}`)
-        console.log("====================================")
-      }
+
     }
 
     if (phone) {
@@ -83,8 +78,7 @@ export async function POST(request: Request) {
       // Use org's whapiToken, same as reminders
       const chatId = whatsappPhone
 
-      console.log("WHATSAPP RESET TARGET:", chatId)
-      console.log("USING ORG TOKEN:", user.whapiToken ? "yes" : "fallback to env")
+
 
       const result = await sendWhatsAppMessage(
         chatId,
@@ -100,13 +94,9 @@ If you did not request this, please ignore this message.`,
         { token: user.whapiToken || undefined }
       )
 
-      console.log("WHATSAPP RESET RESULT:", result)
 
-      if (process.env.NODE_ENV === "development") {
-        console.log("====================================")
-        console.log(`Password reset code for ${phone}: ${resetCode}`)
-        console.log("====================================")
-      }
+
+
     }
 
     return NextResponse.json({

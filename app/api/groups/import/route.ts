@@ -23,9 +23,7 @@ const adminPhone =
 
     const { group } = await request.json()
 
-console.log("GROUP RECEIVED:", group)
-console.log("ORG ID:", organisationId)
-console.log("ADMIN PHONE:", adminPhone)
+
 
     if (!group) {
       return NextResponse.json(

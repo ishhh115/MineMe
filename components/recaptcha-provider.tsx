@@ -8,10 +8,7 @@ export function RecaptchaProvider({
   children: React.ReactNode
 }) {
 
-  console.log(
-    "RECAPTCHA KEY:",
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-  )
+
 
   return (
     <GoogleReCaptchaProvider

@@ -773,7 +773,6 @@ export async function POST(request: Request) {
 
     if (alreadyProcessed) {
       if (isEditedMessage) {
-        console.log(`Detected edited message for ID ${messageId}. Deleting old tasks and re-processing.`)
         await sanityClient.delete({
           query: `*[_type == "task" && (messageId == $messageId || messageId match $messageIdSuffix)]`,
           params: {

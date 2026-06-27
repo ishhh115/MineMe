@@ -21,8 +21,7 @@ export async function GET(request: Request) {
   now.getTime() + 2 * 60 * 60 * 1000
 )
 
-    console.log("NOW:", now.toISOString())
-console.log("TWO HOURS LATER:", twoHoursLater.toISOString())
+
 
 
     const organisations = await sanityClient.fetch(
@@ -34,20 +33,14 @@ console.log("TWO HOURS LATER:", twoHoursLater.toISOString())
 
     for (const org of organisations) {
 
-      console.log("================================")
-  console.log("ORG:", org._id)
-  console.log("WHAPI TOKEN:", org.whapiToken)
-  console.log("PREFS:", org.notificationPreferences)
 
-
-  console.log("CHECKING ORG:", org._id)
 
 const taskCount = await sanityClient.fetch(
   `count(*[_type == "task" && organisation._ref == $orgId])`,
   { orgId: org._id }
 )
 
-console.log("TASK COUNT:", taskCount)
+
 
 
       // Get tasks that need reminders for this org
@@ -76,24 +69,17 @@ console.log("TASK COUNT:", taskCount)
     now: now.toISOString(),
   }
 )
-      console.log("ORG:", org._id)
-console.log("TASKS FOUND:", tasks.length)
-for (const task of tasks) {
-  console.log("TASK:", task.taskText)
-  console.log("DEADLINE:", task.deadline)
-}
+
 
 
       for (const task of tasks) {
-        console.log("CHAT ID:", task.chatId)
-console.log("GROUP NAME:", task.groupName)
+
         try {
           // Send WhatsApp reminder if enabled
           //if (org.notificationPreferences?.whatsapp && task.chatId) {
           if (task.chatId) {
 
-            console.log("REMINDER TARGET:", task.chatId)
-  console.log("TOKEN BEING USED:", org.whapiToken)
+
 
             const waResult = await sendTaskReminder({
               chatId: task.chatId,
@@ -105,7 +91,7 @@ console.log("GROUP NAME:", task.groupName)
               //token: org.whapiToken || undefined,
               token: org.whapiToken || process.env.WHAPI_API_TOKEN,
             })
-            console.log("WA RESULT:", waResult)
+
 
             if (waResult.success) {
               // Save notification to Sanity

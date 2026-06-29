@@ -220,7 +220,7 @@ const noResponse = Math.max(delivered - responded, 0)
           </div>
         </header>
 
-        <Card className="relative overflow-hidden rounded-3xl border border-emerald-300/30 lg:border-emerald-300/24 bg-gradient-to-br from-emerald-500/18 via-emerald-500/8 to-black/40 shadow-[0_25px_65px_rgba(16,185,129,0.22)]">
+        <Card className="relative overflow-hidden rounded-3xl border border-emerald-300/30 lg:border-emerald-300/24 bg-gradient-to-br from-emerald-500/18 via-emerald-500/8 to-black/40 shadow-[0_25px_65px_rgba(67,45,215,0.22)]">
           <div className="pointer-events-none absolute -top-20 right-0 h-56 w-56 rounded-full bg-emerald-300/16 blur-3xl" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-3">

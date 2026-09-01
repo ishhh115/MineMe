@@ -102,7 +102,7 @@ NEXT_PUBLIC_ORG_ID=
 
 ## Getting Started
 
-Clone the repository from https://github.com/luneox/MindMe
+Clone the repository from https://github.com/ishhh115/MineMe.git
 
 Install dependencies with npm install
 

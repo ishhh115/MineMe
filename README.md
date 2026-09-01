@@ -1,4 +1,4 @@
-# MindMe - AI-Powered WhatsApp Task Manager
+# MindMe - AI Powered WhatsApp Task Manager
 
 MindMe is a B2B SaaS platform that automatically extracts actionable tasks from WhatsApp group conversations using AI, organizes them into a structured to-do list, and sends smart deadline reminders back through WhatsApp and email.
 
